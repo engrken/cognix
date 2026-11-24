@@ -11,6 +11,14 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
+  const origin = request.headers.get("origin");
+  if (!origin || new URL(origin).origin !== new URL(request.url).origin) {
+    return NextResponse.json({ error: "forbidden" }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (contentLength > 2_048) {
+    return NextResponse.json({ error: "payload_too_large" }, { status: 413, headers: { "Cache-Control": "no-store" } });
+  }
   if (!isAdminConfigured()) {
     return NextResponse.redirect(new URL("/admin?setup=required", request.url), 303);
   }
