@@ -114,7 +114,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const status = error instanceof ModelGatewayError ? error.status : 502;
     return NextResponse.json(
       {
         error: "model_unavailable",
