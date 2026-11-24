@@ -27,7 +27,7 @@ export default function Home() {
       <div style={{ maxWidth: 1120, margin: "0 auto", padding: "28px 24px 72px" }}>
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, borderBottom: "1px solid rgba(180,200,235,.14)", paddingBottom: 22 }}>
           <Link href="/" style={{ color: "#f5f8ff", textDecoration: "none", fontWeight: 800, letterSpacing: ".18em", fontSize: 18 }}>COGNIX<span style={{ color: "#69b7ff" }}>.</span></Link>
-          <span style={{ color: "#9baac2", fontSize: 12, letterSpacing: ".14em", textTransform: "uppercase" }}>Shared intelligence platform</span>
+          <nav style={{ display: "flex", alignItems: "center", gap: 18 }}><span style={{ color: "#9baac2", fontSize: 12, letterSpacing: ".14em", textTransform: "uppercase" }}>Shared intelligence platform</span><Link href="/admin" style={{ color: "#9bcfff", fontSize: 13, textDecoration: "none" }}>System Admin</Link></nav>
         </header>
 
         <section style={{ padding: "100px 0 76px", maxWidth: 820 }}>
