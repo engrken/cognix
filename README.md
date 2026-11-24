@@ -67,7 +67,7 @@ The protected `/admin` dashboard provides on-demand HTTP availability checks for
 
 Before enabling admin access, configure these sensitive production environment variables in Vercel:
 
-- `COGNIX_ADMIN_PASSWORD`: a unique, high-entropy administrator password.
+- `COGNIX_ADMIN_PASSWORD`: a unique, high-entropy administrator password of at least 16 characters.
 - `COGNIX_ADMIN_SESSION_SECRET`: a separate random secret of at least 32 characters.
 
 The admin session is an HTTP-only, Secure-in-production, SameSite=Strict signed cookie with a 12-hour lifetime. If either variable is missing, the dashboard remains locked. Rotate the session secret to invalidate existing sessions.
