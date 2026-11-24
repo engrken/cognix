@@ -115,25 +115,30 @@ export async function recordMonitorSnapshot(
     })),
   };
 
-  // Conditional writes prevent two simultaneous dashboard/cron checks from
-  // silently overwriting one another. A fresh read is made after a conflict.
+  // Conditional writes prevent simultaneous checks from silently overwriting
+  // one another. The stable snapshot ID also makes retries idempotent.
   let lastError: unknown;
   for (let attempt = 0; attempt < 4; attempt += 1) {
     try {
       const current = await readDocument();
+      const alreadyRecorded = current.document.snapshots.some((item) => item.id === snapshot.id);
       const next: HistoryDocument = {
         version: 1,
-        snapshots: [...current.document.snapshots, snapshot].slice(-MAX_SNAPSHOTS),
+        snapshots: (alreadyRecorded
+          ? current.document.snapshots
+          : [...current.document.snapshots, snapshot]).slice(-MAX_SNAPSHOTS),
       };
 
-      await put(HISTORY_PATH, JSON.stringify(next), {
-        access: "private",
-        contentType: "application/json",
-        cacheControlMaxAge: 60,
-        ttlDays: RETENTION_DAYS,
-        allowOverwrite: Boolean(current.etag),
-        ...(current.etag ? { ifMatch: current.etag } : {}),
-      });
+      if (!alreadyRecorded) {
+        await put(HISTORY_PATH, JSON.stringify(next), {
+          access: "private",
+          contentType: "application/json",
+          cacheControlMaxAge: 60,
+          ttlDays: RETENTION_DAYS,
+          allowOverwrite: Boolean(current.etag),
+          ...(current.etag ? { ifMatch: current.etag } : {}),
+        });
+      }
       return;
     } catch (error) {
       lastError = error;
