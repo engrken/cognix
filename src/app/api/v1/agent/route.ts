@@ -3,7 +3,6 @@ import { z } from "zod";
 import { hasValidServiceToken } from "@/lib/auth";
 import {
   generateModelText,
-  ModelGatewayError,
   ModelNotConfiguredError,
 } from "@/lib/ai/model";
 
