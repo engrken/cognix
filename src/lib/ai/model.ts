@@ -109,6 +109,9 @@ export async function generateModelText(input: {
             { role: "user", content: input.prompt },
           ],
           max_tokens: maxTokens,
+          // Nemotron defaults to reasoning; disable it for this short, bounded summary
+          // so the output budget is reserved for the user-visible answer.
+          reasoning: { effort: "none" },
           temperature: 0.2,
           stream: false,
         }),
