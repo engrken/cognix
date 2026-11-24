@@ -1,3 +1,5 @@
+import { getMonitorHistory, recordMonitorSnapshot, type MonitorHistory } from "@/lib/monitor-history";
+
 export type MonitorResult = {
   id: string;
   name: string;
@@ -40,7 +42,7 @@ async function checkTarget(target: (typeof TARGETS)[number]): Promise<MonitorRes
   }
 }
 
-export async function getSystemStatus() {
+export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashboard") {
   const checkedAt = new Date().toISOString();
   const services = await Promise.all(TARGETS.map(checkTarget));
   const unhealthy = services.filter((service) => service.status === "unhealthy").length;
@@ -57,12 +59,33 @@ export async function getSystemStatus() {
         : "Review the endpoint redirect and confirm the intended sign-in behavior.",
     }));
 
+  let history: MonitorHistory = {
+    available: false,
+    sampleCount: 0,
+    periodStart: null,
+    periodEnd: null,
+    availability: [],
+    incidents: [],
+  };
+  try {
+    await recordMonitorSnapshot({ checkedAt, services }, source);
+    history = await getMonitorHistory();
+  } catch {
+    // Keep the live health check available even if history storage is temporarily unavailable.
+    try {
+      history = await getMonitorHistory();
+    } catch {
+      // The dashboard reports history as unavailable without exposing storage details.
+    }
+  }
+
   return {
     checkedAt,
     overall,
     summary: { total: services.length, healthy: services.length - unhealthy - degraded, degraded, unhealthy },
     services,
     recommendations,
+    history,
     scope: "HTTP availability only; no database contents, user records, or application secrets are accessed.",
   };
 }

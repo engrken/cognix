@@ -12,6 +12,17 @@ const palette = {
   unhealthy: { color: "#ff8585", label: "Unhealthy" },
 };
 
+function formatDuration(milliseconds: number | null) {
+  if (milliseconds === null) return "Ongoing";
+  const minutes = Math.floor(milliseconds / 60_000);
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+  if (hours < 24) return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h`;
+}
+
 export default async function AdminPage({
   searchParams,
 }: {
@@ -48,6 +59,7 @@ export default async function AdminPage({
   }
 
   const status = await getSystemStatus();
+  const history = status.history;
   return (
     <main style={{ minHeight: "100vh", padding: "32px 20px 64px", background: "#080d18", color: "#eef3ff" }}>
       <div style={{ maxWidth: 1080, margin: "0 auto" }}>
@@ -80,12 +92,55 @@ export default async function AdminPage({
         </section>
 
         <section style={{ marginTop: 30 }}>
+          <h2 style={{ fontSize: 20 }}>Historical availability</h2>
+          {!history.available ? (
+            <p role="status" style={{ color: "#f4c66a" }}>History storage is currently unavailable. Live health checks are still active.</p>
+          ) : history.sampleCount === 0 ? (
+            <p style={{ color: "#aab8ce" }}>No historical checks have been recorded yet.</p>
+          ) : (
+            <>
+              <p style={{ color: "#8fa4c0", fontSize: 13 }}>{history.sampleCount} recorded checks · {history.periodStart ? new Date(history.periodStart).toLocaleString("en-PH", { timeZone: "Asia/Manila" }) : "—"} to {history.periodEnd ? new Date(history.periodEnd).toLocaleString("en-PH", { timeZone: "Asia/Manila" }) : "—"}</p>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 12 }}>
+                {history.availability.map((item) => (
+                  <article key={item.id} style={{ padding: 16, borderRadius: 10, border: "1px solid #26364e", background: "#111b2c" }}>
+                    <h3 style={{ margin: "0 0 8px", fontSize: 16 }}>{item.name}</h3>
+                    <p style={{ margin: "0 0 6px", color: "#74dfb0", fontSize: 24, fontWeight: 800 }}>{item.healthyPercent === null ? "—" : `${item.healthyPercent}%`}</p>
+                    <p style={{ margin: 0, color: "#8fa4c0", fontSize: 12 }}>{item.healthyChecks} healthy / {item.totalChecks} samples</p>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
+
+        <section style={{ marginTop: 30 }}>
+          <h2 style={{ fontSize: 20 }}>Incident history</h2>
+          {!history.available ? (
+            <p style={{ color: "#8fa4c0" }}>Incident history will appear when storage is available.</p>
+          ) : history.incidents.length === 0 ? (
+            <p style={{ color: "#74dfb0" }}>No incidents observed in recorded checks.</p>
+          ) : (
+            <div style={{ display: "grid", gap: 10 }}>
+              {history.incidents.map((incident) => (
+                <article key={incident.id} style={{ padding: 16, borderRadius: 10, border: "1px solid #26364e", background: "#111b2c" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <strong>{incident.service}</strong>
+                    <span style={{ color: incident.resolved ? "#74dfb0" : "#ff8585", fontSize: 12, fontWeight: 700 }}>{incident.resolved ? "Resolved" : "Ongoing"} · {incident.severity}</span>
+                  </div>
+                  <p style={{ margin: "8px 0 0", color: "#8fa4c0", fontSize: 12 }}>Started {new Date(incident.startedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })} · Duration {formatDuration(incident.durationMs)}</p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section style={{ marginTop: 30 }}>
           <h2 style={{ fontSize: 20 }}>Recommended checks</h2>
           {status.recommendations.length === 0 ? <p style={{ color: "#74dfb0" }}>No availability issues detected in this check.</p> : <ul style={{ paddingLeft: 22, color: "#c5d1e1", lineHeight: 1.8 }}>{status.recommendations.map((item) => <li key={item.service}><strong>{item.service} ({item.priority})</strong>: {item.action}</li>)}</ul>}
         </section>
 
         <footer style={{ marginTop: 36, paddingTop: 18, borderTop: "1px solid #26364e", color: "#718198", fontSize: 12, lineHeight: 1.7 }}>
-          {status.scope}<br />Checks run when this page is opened; no background polling or automatic remediation is enabled.
+          {status.scope}<br />Checks run daily automatically and whenever the dashboard is opened. Availability percentages reflect recorded samples, not continuous minute-by-minute uptime.
           <p><Link href="/admin" style={{ color: "#8fc5ff" }}>Refresh status</Link> · <Link href="/api/admin/status" style={{ color: "#8fc5ff" }}>Protected status API</Link></p>
         </footer>
       </div>
