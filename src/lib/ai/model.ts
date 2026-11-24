@@ -1,3 +1,5 @@
+import { getVercelOidcToken } from "@vercel/oidc";
+
 export type ModelResult = {
   text: string;
   usage?: {
@@ -37,10 +39,21 @@ type GatewayResponse = {
   };
 };
 
-function readModelConfig() {
+async function readModelConfig() {
   const model = process.env.AI_GATEWAY_MODEL?.trim();
+  let oidcToken = "";
+
+  // Vercel injects the OIDC token into the function request context,
+  // not reliably into process.env. Resolve it at request time.
+  try {
+    oidcToken = (await getVercelOidcToken()).trim();
+  } catch {
+    // Local/API-key fallback is handled below.
+  }
+
   const token =
     process.env.AI_GATEWAY_API_KEY?.trim() ||
+    oidcToken ||
     process.env.VERCEL_OIDC_TOKEN?.trim();
 
   if (!model || !token) {
@@ -64,7 +77,7 @@ export async function generateModelText(input: {
   prompt: string;
   maxOutputTokens?: number;
 }): Promise<ModelResult> {
-  const { model, token } = readModelConfig();
+  const { model, token } = await readModelConfig();
 
   if (
     input.system.length > 4_000 ||
