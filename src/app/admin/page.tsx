@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import Link from "next/link";
 import { ADMIN_COOKIE, isAdminConfigured, verifyAdminSession } from "@/lib/admin-session";
 import { getSystemStatus } from "@/lib/system-monitor";
 
@@ -25,7 +26,7 @@ export default async function AdminPage({
     return (
       <main style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 24, background: "#080d18", color: "#eef3ff" }}>
         <section style={{ width: "100%", maxWidth: 420, padding: 28, border: "1px solid #26364e", borderRadius: 16, background: "#111b2c" }}>
-          <a href="/" style={{ color: "#8fc5ff", textDecoration: "none", fontWeight: 800, letterSpacing: ".14em" }}>COGNIX</a>
+          <Link href="/" style={{ color: "#8fc5ff", textDecoration: "none", fontWeight: 800, letterSpacing: ".14em" }}>COGNIX</Link>
           <h1 style={{ margin: "24px 0 8px", fontSize: 28 }}>System Admin</h1>
           <p style={{ color: "#aab8ce", lineHeight: 1.6 }}>Restricted operations dashboard. Sign in with the administrator credential.</p>
           {!configured ? (
@@ -51,7 +52,7 @@ export default async function AdminPage({
     <main style={{ minHeight: "100vh", padding: "32px 20px 64px", background: "#080d18", color: "#eef3ff" }}>
       <div style={{ maxWidth: 1080, margin: "0 auto" }}>
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderBottom: "1px solid #26364e", paddingBottom: 20 }}>
-          <div><a href="/" style={{ color: "#8fc5ff", textDecoration: "none", fontWeight: 800, letterSpacing: ".14em" }}>COGNIX</a><p style={{ margin: "8px 0 0", color: "#aab8ce" }}>System Admin · Read-only monitoring</p></div>
+          <div><Link href="/" style={{ color: "#8fc5ff", textDecoration: "none", fontWeight: 800, letterSpacing: ".14em" }}>COGNIX</Link><p style={{ margin: "8px 0 0", color: "#aab8ce" }}>System Admin · Read-only monitoring</p></div>
           <form action="/api/admin/logout" method="post"><button type="submit" style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #40516a", background: "transparent", color: "#d7e2f2" }}>Sign out</button></form>
         </header>
 
@@ -85,7 +86,7 @@ export default async function AdminPage({
 
         <footer style={{ marginTop: 36, paddingTop: 18, borderTop: "1px solid #26364e", color: "#718198", fontSize: 12, lineHeight: 1.7 }}>
           {status.scope}<br />Checks run when this page is opened; no background polling or automatic remediation is enabled.
-          <p><a href="/admin" style={{ color: "#8fc5ff" }}>Refresh status</a> · <a href="/api/admin/status" style={{ color: "#8fc5ff" }}>Protected status API</a></p>
+          <p><Link href="/admin" style={{ color: "#8fc5ff" }}>Refresh status</Link> · <Link href="/api/admin/status" style={{ color: "#8fc5ff" }}>Protected status API</Link></p>
         </footer>
       </div>
     </main>
