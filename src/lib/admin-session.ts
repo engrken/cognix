@@ -19,7 +19,7 @@ function safeEqual(a: string, b: string) {
 
 export function isAdminConfigured() {
   return Boolean(
-    process.env.COGNIX_ADMIN_PASSWORD?.trim() && sessionSecret().length >= 32,
+    (process.env.COGNIX_ADMIN_PASSWORD?.length ?? 0) >= 16 && sessionSecret().length >= 32,
   );
 }
 
@@ -47,7 +47,7 @@ export function verifyAdminSession(value: string | undefined) {
 
 export function verifyAdminPassword(candidate: string) {
   const configured = process.env.COGNIX_ADMIN_PASSWORD ?? "";
-  if (!configured || !candidate) return false;
+  if (configured.length < 16 || !candidate || candidate.length > 256) return false;
   return safeEqual(candidate, configured);
 }
 
