@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const apps = [
   {
     name: "SAGA",
@@ -24,7 +26,7 @@ export default function Home() {
     <main style={{ minHeight: "100vh", overflow: "hidden", background: "radial-gradient(ellipse at 75% 5%, rgba(40,105,190,.22), transparent 38%), #080d18" }}>
       <div style={{ maxWidth: 1120, margin: "0 auto", padding: "28px 24px 72px" }}>
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, borderBottom: "1px solid rgba(180,200,235,.14)", paddingBottom: 22 }}>
-          <a href="/" style={{ color: "#f5f8ff", textDecoration: "none", fontWeight: 800, letterSpacing: ".18em", fontSize: 18 }}>COGNIX<span style={{ color: "#69b7ff" }}>.</span></a>
+          <Link href="/" style={{ color: "#f5f8ff", textDecoration: "none", fontWeight: 800, letterSpacing: ".18em", fontSize: 18 }}>COGNIX<span style={{ color: "#69b7ff" }}>.</span></Link>
           <span style={{ color: "#9baac2", fontSize: 12, letterSpacing: ".14em", textTransform: "uppercase" }}>Shared intelligence platform</span>
         </header>
 
