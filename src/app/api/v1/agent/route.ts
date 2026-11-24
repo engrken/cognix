@@ -3,6 +3,7 @@ import { z } from "zod";
 import { hasValidServiceToken } from "@/lib/auth";
 import {
   generateModelText,
+  ModelGatewayError,
   ModelNotConfiguredError,
 } from "@/lib/ai/model";
 
@@ -113,10 +114,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // Expose only a coarse HTTP diagnostic; never log tokens or provider response bodies.
+    const gatewayStatus = error instanceof ModelGatewayError ? error.status : null;
+    console.error("COGNIX model request failed", {
+      requestId: parsed.data.requestId ?? null,
+      gatewayStatus,
+      failureType: error instanceof ModelGatewayError ? "gateway" : "internal",
+    });
+
     return NextResponse.json(
       {
         error: "model_unavailable",
         message: "COGNIX could not complete the summary. No SAGA records were changed.",
+        gatewayStatus,
         app: "saga",
         requestId: parsed.data.requestId ?? null,
       },
