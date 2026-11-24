@@ -41,9 +41,9 @@
 
 ## System Admin dashboard
 
-- Admin access requires both `COGNIX_ADMIN_PASSWORD` and a separate `COGNIX_ADMIN_SESSION_SECRET` of at least 32 characters.
+- Admin access requires a `COGNIX_ADMIN_PASSWORD` of at least 16 characters and a separate `COGNIX_ADMIN_SESSION_SECRET` of at least 32 characters.
 - The dashboard fails closed when either setting is absent.
-- Admin sessions are signed, HTTP-only, Secure in production, SameSite=Strict, and expire after 12 hours.
+- Admin sessions are signed, HTTP-only, Secure in production, SameSite=Strict, and expire after 12 hours. Login requests require a same-origin Origin header and reject oversized form bodies.
 - Monitoring uses a fixed HTTPS endpoint allow-list; no caller- or model-supplied URLs are fetched.
 - Status responses expose only endpoint labels, HTTP status, latency, and coarse diagnostics. Response bodies, credentials, and application records are not collected.
 - Monitoring is on-demand only. No scheduled jobs, automatic remediation, or write operations are enabled.
