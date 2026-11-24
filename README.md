@@ -59,3 +59,17 @@ Requires Node.js 20.9+ and npm.
 - [ ] Human-approved write workflows after security review
 
 No production integrations or paid infrastructure are provisioned by this scaffold.
+
+
+## System Admin monitoring
+
+The protected `/admin` dashboard provides on-demand HTTP availability checks for COGNIX, SAGA, CLEAR Sys, and ROAMPH. The monitor is read-only, uses a fixed HTTPS endpoint allow-list, and does not inspect application records or connect to application databases. It does not run in the background.
+
+Before enabling admin access, configure these sensitive production environment variables in Vercel:
+
+- `COGNIX_ADMIN_PASSWORD`: a unique, high-entropy administrator password.
+- `COGNIX_ADMIN_SESSION_SECRET`: a separate random secret of at least 32 characters.
+
+The admin session is an HTTP-only, Secure-in-production, SameSite=Strict signed cookie with a 12-hour lifetime. If either variable is missing, the dashboard remains locked. Rotate the session secret to invalidate existing sessions.
+
+The first monitoring milestone measures HTTP reachability and response latency only. Deployment history, database health, security events, and AI-generated incident analysis are intentionally deferred until dedicated, authenticated data sources and retention controls are designed.
