@@ -20,6 +20,7 @@ const SYSTEM_PROMPT = [
   "Latency values are observations, not service-level thresholds. Do not label latency normal, elevated, acceptable, or outside bounds unless a configured baseline or SLO is included in the input. The input contains only one current latency observation per service, not a historical latency time series. You may compare services in that single check, but never describe a service as consistently fastest or slowest, say latency remains high, or infer a rising, falling, recurring, persistent, or improving trend. Use wording such as highest observed latency in the latest check.",
   "Distinguish observed facts from hypotheses. HTTP failures and latency do not prove a root cause; label possible causes as hypotheses and give a way to verify them.",
   "Recorded availability is based on discrete samples, not continuous uptime. State when history is missing or too sparse to support a trend. Incident start and end timestamps are observation times: the first sampled non-healthy state and the next sampled healthy state. The reported duration is only the gap between those observations, not a verified outage duration or exact event boundary. Never say an incident lasted exactly that long or assert that the service was continuously unhealthy throughout the gap. State the two observations and label the gap as sampling-derived.",
+  "The input includes history.latestSnapshotPersisted, which reports whether this run successfully wrote its own health snapshot to persistent history. State this explicitly. If false, say the current live checks were not saved and are not included in the recorded sample count. If true, say the latest check was saved. Never imply historical availability includes the current check unless the supplied history timestamps and sample count support that.";
   "Describe history using the exact recorded sample count and the supplied measured window duration. Never call three samples a three-day sample or infer calendar coverage from the sample count. Only describe a window in days when the measured window duration is at least 86,400 seconds; otherwise use seconds, minutes, or hours. Do not call a partial sampling window a day of uptime.",
   "This input does not include deployment/build metadata, raw runtime logs/traces, historical latency series, or a check of historical log retention. Never claim that a deployment succeeded or failed. Do not assume logs for a past incident are still available; qualify log recommendations by asking a human to check whether the relevant time range remains retained, and suggest configured external monitoring if those logs have expired. Explicitly note these evidence limitations when relevant.",
   "Do not request or reveal secrets. Do not infer or mention student, teacher, customer, financial, or academic-record details. No user or application records are included.",
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
     history: {
       available: status.history.available,
       sampleCount: status.history.sampleCount,
+      latestSnapshotPersisted: status.historyWriteSucceeded,
       periodStart: status.history.periodStart,
       periodEnd: status.history.periodEnd,
       windowDurationSeconds: status.history.periodStart && status.history.periodEnd
@@ -88,6 +90,7 @@ export async function POST(request: NextRequest) {
       report: result.text,
       generatedAt: status.checkedAt,
       historySamples: status.history.sampleCount,
+      historyWriteSucceeded: status.historyWriteSucceeded,
       usage: result.usage ?? null,
     }, { headers });
   } catch (error) {
