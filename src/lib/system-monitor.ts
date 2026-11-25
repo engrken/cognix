@@ -12,8 +12,8 @@ export type MonitorResult = {
 
 const TARGETS = [
   { id: "cognix", name: "COGNIX", url: "https://cognixph.vercel.app/api/health", endpoint: "/api/health" },
-  { id: "saga", name: "SAGA", url: "https://mysaga.vercel.app/", endpoint: "/" },
-  { id: "clear", name: "CLEAR Sys", url: "https://clearsys.vercel.app/", endpoint: "/" },
+  { id: "saga", name: "SAGA", url: "https://mysaga.vercel.app/api/health", endpoint: "/api/health" },
+  { id: "clear", name: "CLEAR Sys", url: "https://clearsys.vercel.app/api/health", endpoint: "/api/health" },
   { id: "roamph", name: "ROAMPH", url: "https://roamph.vercel.app/api/health", endpoint: "/api/health" },
 ] as const;
 
@@ -31,10 +31,43 @@ async function checkTarget(target: (typeof TARGETS)[number]): Promise<MonitorRes
     });
     const latencyMs = Date.now() - startedAt;
     if (response.status >= 200 && response.status < 300) {
-      return { id: target.id, name: target.name, endpoint: target.endpoint, status: "healthy", httpStatus: response.status, latencyMs, detail: "Endpoint responded successfully." };
+      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+      if (!contentType.includes("application/json")) {
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "Health endpoint returned an unexpected response format." };
+      }
+
+      const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
+      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "Health endpoint returned an invalid readiness response." };
+      }
+
+      const declaredStatus = typeof payload.status === "string" ? payload.status.toLowerCase() : null;
+      const databaseStatus = typeof payload.database === "string" ? payload.database.toLowerCase() : null;
+      const acceptedStatuses = target.id === "cognix" ? ["ok", "healthy", "foundation"] : ["ok", "healthy"];
+
+      if (declaredStatus === "unhealthy" || databaseStatus === "unavailable") {
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: response.status, latencyMs, detail: "The application reports an unavailable dependency." };
+      }
+      if (declaredStatus === "degraded") {
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "The application reports degraded readiness." };
+      }
+      if (!declaredStatus || !acceptedStatuses.includes(declaredStatus)) {
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "Health endpoint returned an unrecognized readiness status." };
+      }
+      if (target.id !== "cognix" && !databaseStatus) {
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "The application did not report its database readiness." };
+      }
+      if (databaseStatus && !["ok", "healthy", "reachable"].includes(databaseStatus)) {
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: response.status, latencyMs, detail: "The application database readiness check did not pass." };
+      }
+
+      const detail = databaseStatus
+        ? "Application and database connectivity checks passed."
+        : "Application readiness endpoint responded successfully.";
+      return { id: target.id, name: target.name, endpoint: target.endpoint, status: "healthy", httpStatus: response.status, latencyMs, detail };
     }
     if (response.status >= 300 && response.status < 400) {
-      return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "Endpoint redirected; availability needs review." };
+      return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "Health endpoint redirected; availability needs review." };
     }
     return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: response.status, latencyMs, detail: "Endpoint returned an unsuccessful HTTP status." };
   } catch {
@@ -55,8 +88,8 @@ export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashb
       service: service.name,
       priority: service.status === "unhealthy" ? "high" as const : "medium" as const,
       action: service.status === "unhealthy"
-        ? "Check the deployment and application logs, then verify the health endpoint."
-        : "Review the endpoint redirect and confirm the intended sign-in behavior.",
+        ? "Check the deployment and application logs, then verify the health endpoint and its dependency checks."
+        : "Review the application's readiness response and confirm its health endpoint contract.",
     }));
 
   let history: MonitorHistory = {
@@ -86,6 +119,6 @@ export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashb
     services,
     recommendations,
     history,
-    scope: "HTTP availability only; no database contents, user records, or application secrets are accessed.",
+    scope: "HTTP readiness checks and a minimal database connectivity probe where configured; no application tables, user records, or secrets are read.",
   };
 }
