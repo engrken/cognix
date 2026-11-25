@@ -2,66 +2,66 @@
 
 **Think. Connect. Execute.**
 
-The shared intelligence layer for SAGA, CLEAR Sys, and ROAMPH.
+The governed intelligence and orchestration layer for SAGA, CLEAR Sys, and ROAMPH.
 
-> One intelligence platform. Multiple intelligent applications.
+> Centralize intelligence and governance, not private application data.
 
 ## Purpose
 
-COGNIX provides a governed API, agent orchestration, application-scoped tools, model access, and execution auditing for the three applications.
+COGNIX provides a versioned server-to-server API, a default-deny capability registry, controlled model access, system operations monitoring, and future agent orchestration. Each application remains authoritative for its own data, permissions, calculations, and business rules.
 
 ## Connected applications
 
-| App | Initial capabilities | Access |
+| App | Integration | Capability policy |
 |---|---|---|
-| SAGA | Aggregate teacher summaries | Read-only |
-| CLEAR Sys | Planned operational summaries and audit assistance | Not enabled |
-| ROAMPH | Planned fleet and rental operations summaries | Not enabled |
+| SAGA | Initial server adapter exists; experimental call disabled | Teacher-summary disabled pending privacy review |
+| CLEAR Sys | Not connected | Planned; model access blocked |
+| ROAMPH | Not connected | Planned; model access blocked |
 
-## Architecture
+## Architecture and privacy principles
 
-- API layer: versioned server-to-server interface at `POST /api/v1/agent`.
-- Authentication: distinct service credential per application, with a SAGA-only legacy credential fallback.
-- Authorization: each application retains ownership of end-user, tenant, role, and record-level permissions.
-- Orchestrator: explicit application/task allow-list; disabled capabilities fail closed.
-- Model adapter: provider-neutral boundary with usage budgets.
-- Audit layer: redacted execution metadata; persistent audit storage is a later milestone.
+- Versioned application API: `POST /api/v1/agent`.
+- Per-application service credentials; service identity never replaces end-user authorization.
+- Static capability registry with default-deny execution.
+- Applications retain their own users, tenant scope, records, and business rules.
+- No direct production database connections from COGNIX.
+- No application data is shared by default.
+- Each proposed capability requires a defined purpose, necessity/proportionality review, minimum-data contract, and provider-retention review before model access.
+- Prefer local deterministic processing when it accomplishes the task without disclosing application data.
+- No autonomous business-record mutations.
 
-See docs/ARCHITECTURE.md, docs/SECURITY.md, and docs/INTEGRATION.md.
+## Operations and administration
+
+The protected `/admin` dashboard provides:
+- Live health checks and persistent availability/incident history.
+- Read-only System Operations Agent reports using COGNIX technical health metadata.
+- Agent registry showing application owners, capability states, data boundaries, approval requirements, and model-access state.
+
+The registry is an inventory and policy control plane, not a dynamic permission editor. Capability changes require reviewed code changes and deployment.
 
 ## Local development
 
 Requires Node.js 20.9+ and npm.
 
-1. Run npm install.
-2. Copy .env.example to .env.local.
-3. Set `COGNIX_API_KEY` or `COGNIX_SAGA_API_KEY` to a long random secret for the SAGA pilot.
-4. Run npm run dev.
-5. Open http://localhost:3000/api/health.
-
-## v1 safety rules
-
-1. Read-only capabilities only.
-2. Each application enforces its own user, tenant, role, and record permissions.
-3. COGNIX does not connect directly to production application databases.
-4. No autonomous grading, financial, booking, payment, or clearance mutations.
-5. One model invocation per task by default; enforce token and request budgets.
-6. Never log raw prompts, credentials, student records, financial details, or payment data.
+1. Run `npm install`.
+2. Copy `.env.example` to `.env.local`.
+3. Configure administrator variables for local admin testing.
+4. Run `npm run dev`.
+5. Open `http://localhost:3000/api/health`.
 
 ## Roadmap
 
 - [x] Repository foundation and architecture boundaries
 - [x] Health endpoint and service authentication
 - [x] Model adapter and budget configuration
-- [x] Versioned v1 agent API and SAGA compatibility adapter
-- [ ] CLEAR Sys application credential and first read-only capability
-- [ ] ROAMPH application credential and first read-only capability
-- [ ] Structured audit persistence and approvals
-- [ ] Integration tests and expanded operational controls
-- [ ] Human-approved write workflows after security review
+- [x] Versioned v1 agent API
+- [x] Privacy-first static agent registry and default-deny API policy
+- [x] Admin registry and policy inventory
+- [x] System Admin monitoring and persistent history
+- [ ] Approved, minimum-data application capabilities
+- [ ] Structured, redacted integration audit
+- [ ] Agent orchestration and human approval workflows
+- [ ] Application-specific adapters after privacy and security review
+- [ ] Expanded integration tests and operational controls
 
 No production application database is provisioned or directly connected to COGNIX.
-
-## System Admin monitoring
-
-The protected `/admin` dashboard provides live HTTP readiness checks for COGNIX, SAGA, CLEAR Sys, and ROAMPH. Persistent sample and incident history is stored in a private Vercel Blob. The monitor uses a fixed HTTPS endpoint allow-list and does not inspect application records or connect to application databases. Admin-triggered checks and the scheduled monitoring route are separate from application agent requests.

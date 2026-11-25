@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ADMIN_COOKIE, isAdminConfigured, verifyAdminSession } from "@/lib/admin-session";
 import { getSystemStatus } from "@/lib/system-monitor";
 import OperationsAgent from "./operations-agent";
+import AgentRegistry from "./agent-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -141,6 +142,7 @@ export default async function AdminPage({
         </section>
 
         <OperationsAgent />
+        <AgentRegistry />
 
         <footer style={{ marginTop: 36, paddingTop: 18, borderTop: "1px solid #26364e", color: "#718198", fontSize: 12, lineHeight: 1.7 }}>
           {status.scope}<br />Checks run daily automatically and whenever the dashboard is opened. Availability percentages reflect recorded samples, not continuous minute-by-minute uptime.
