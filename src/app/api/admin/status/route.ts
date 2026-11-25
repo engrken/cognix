@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const status = await getSystemStatus();
+  const status = await getSystemStatus("dashboard", { persist: false });
   return NextResponse.json(status, {
     headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" },
   });
