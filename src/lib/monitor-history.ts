@@ -118,7 +118,7 @@ export async function recordMonitorSnapshot(
   // Conditional writes prevent simultaneous checks from silently overwriting
   // one another. The stable snapshot ID also makes retries idempotent.
   let lastError: unknown;
-  for (let attempt = 0; attempt < 4; attempt += 1) {
+  for (let attempt = 0; attempt < 6; attempt += 1) {
     try {
       const current = await readDocument();
       const alreadyRecorded = current.document.snapshots.some((item) => item.id === snapshot.id);
@@ -142,6 +142,11 @@ export async function recordMonitorSnapshot(
       return;
     } catch (error) {
       lastError = error;
+      // Let concurrent writers finish, then re-read the newest ETag before retrying.
+      if (attempt < 5) {
+        const backoffMs = 50 * (2 ** attempt) + Math.floor(Math.random() * 50);
+        await new Promise((resolve) => setTimeout(resolve, backoffMs));
+      }
     }
   }
 
