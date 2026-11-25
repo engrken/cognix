@@ -19,6 +19,38 @@ export default function OperationsAgent() {
   const [historyWriteSucceeded, setHistoryWriteSucceeded] = useState<boolean | null>(null);
   const [usage, setUsage] = useState<ReportPayload["usage"]>(null);
   const [error, setError] = useState("");
+  const [copyStatus, setCopyStatus] = useState("");
+
+  async function copyReport() {
+    if (!report) return;
+    const generatedLabel = generatedAt
+      ? new Date(generatedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })
+      : "just now";
+    const historyLabel = historySamples === null
+      ? "History unavailable"
+      : `${historySamples} recorded samples${historyWriteSucceeded === true ? " · Latest check saved" : historyWriteSucceeded === false ? " · Latest check not saved" : ""}`;
+    const completeReport = `Generated ${generatedLabel}\n${historyLabel}\n\n${report}`;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(completeReport);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = completeReport;
+        textarea.setAttribute("readonly", "");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        if (!copied) throw new Error("Clipboard copy was not available.");
+      }
+      setCopyStatus("Report copied to clipboard.");
+    } catch {
+      setCopyStatus("Could not copy automatically. Please select and copy the report text.");
+    }
+  }
 
   async function generateReport() {
     if (loading) return;
@@ -69,10 +101,14 @@ export default function OperationsAgent() {
       {error ? <p role="alert" style={{ margin: "16px 0 0", color: "#ff9999", lineHeight: 1.6 }}>{error}</p> : null}
       {report ? (
         <div style={{ marginTop: 18, padding: 18, borderRadius: 10, border: "1px solid #30435e", background: "#080f1c" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", color: "#8fa4c0", fontSize: 12, marginBottom: 12 }}>
-            <span>Generated {generatedAt ? new Date(generatedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" }) : "just now"}</span>
-            <span>{historySamples === null ? "History unavailable" : historySamples + " recorded samples"}{historyWriteSucceeded === true ? " · Latest check saved" : historyWriteSucceeded === false ? " · Latest check not saved" : ""}{usage?.outputTokens ? " · " + usage.outputTokens + " output tokens" : ""}</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, color: "#8fa4c0", fontSize: 12 }}>
+              <span>Generated {generatedAt ? new Date(generatedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" }) : "just now"}</span>
+              <span>{historySamples === null ? "History unavailable" : historySamples + " recorded samples"}{historyWriteSucceeded === true ? " · Latest check saved" : historyWriteSucceeded === false ? " · Latest check not saved" : ""}{usage?.outputTokens ? " · " + usage.outputTokens + " output tokens" : ""}</span>
+            </div>
+            <button type="button" onClick={copyReport} style={{ padding: "9px 13px", border: "1px solid #52769d", borderRadius: 8, background: "#142943", color: "#d7eaff", fontWeight: 700, cursor: "pointer" }}>Copy report</button>
           </div>
+          <p role="status" aria-live="polite" style={{ margin: "0 0 10px", color: copyStatus.startsWith("Could not") ? "#f4c66a" : "#8fc5ff", fontSize: 12 }}>{copyStatus}</p>
           <pre style={{ margin: 0, color: "#d7e2f2", fontFamily: "inherit", fontSize: 14, lineHeight: 1.75, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{report}</pre>
         </div>
       ) : null}
