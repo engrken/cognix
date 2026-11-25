@@ -75,7 +75,7 @@ async function checkTarget(target: (typeof TARGETS)[number]): Promise<MonitorRes
   }
 }
 
-export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashboard") {
+export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashboard", options: { persist?: boolean } = {}) {
   const checkedAt = new Date().toISOString();
   const services = await Promise.all(TARGETS.map(checkTarget));
   const unhealthy = services.filter((service) => service.status === "unhealthy").length;
@@ -102,9 +102,11 @@ export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashb
   };
   let historyWriteSucceeded = false;
   try {
-    await recordMonitorSnapshot({ checkedAt, services }, source);
-    historyWriteSucceeded = true;
-    console.info("COGNIX monitor snapshot persisted", { source, checkedAt });
+    if (options.persist !== false) {
+      await recordMonitorSnapshot({ checkedAt, services }, source);
+      historyWriteSucceeded = true;
+      console.info("COGNIX monitor snapshot persisted", { source, checkedAt });
+    }
     history = await getMonitorHistory();
   } catch (error) {
     // Log only allow-listed error metadata; never emit tokens, URLs, request bodies, or raw messages.
