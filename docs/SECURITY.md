@@ -2,11 +2,13 @@
 
 ## Authentication and authorization
 
-- Require a high-entropy server-to-server bearer token.
-- Store credentials only in server-side environment variables.
-- Rotate exposed credentials; never commit secrets.
+- Require a high-entropy server-to-server bearer token for every application.
+- Use separate server-only credentials: `COGNIX_SAGA_API_KEY`, `COGNIX_CLEAR_API_KEY`, and `COGNIX_ROAMPH_API_KEY`.
+- The legacy `COGNIX_API_KEY` is accepted only as a backward-compatible SAGA credential.
+- Store credentials only in server-side environment variables. Rotate exposed credentials; never commit secrets.
 - Service authentication is not end-user authorization. Each application independently enforces the current user's permissions, tenant scope, and record access.
 - Never trust an app name, user ID, role, tenant ID, or permission claim supplied only by a model or browser.
+- Recognizing an application does not enable its tools. The dispatcher uses an explicit application/task allow-list.
 
 ## Data handling
 
@@ -31,19 +33,19 @@
 
 ## Deployment checklist
 
-- [ ] Set a high-entropy COGNIX_API_KEY in deployment secrets.
+- [ ] Set a unique high-entropy application key for each enabled integration.
 - [ ] Keep preview and production credentials separate.
 - [ ] Restrict access to logs and environment settings.
 - [ ] Confirm HTTPS and deployment access controls.
 - [ ] Add rate limiting and request budgets before external exposure.
 - [ ] Review data processing and retention before sending real user data to a model.
 
-
 ## System Admin dashboard
 
 - Admin access requires a `COGNIX_ADMIN_PASSWORD` of at least 16 characters and a separate `COGNIX_ADMIN_SESSION_SECRET` of at least 32 characters.
-- The dashboard fails closed when either setting is absent.
+- The dashboard fails closed when either setting is missing.
 - Admin sessions are signed, HTTP-only, Secure in production, SameSite=Strict, and expire after 12 hours. Login requests require a same-origin Origin header and reject oversized form bodies.
 - Monitoring uses a fixed HTTPS endpoint allow-list; no caller- or model-supplied URLs are fetched.
 - Status responses expose only endpoint labels, HTTP status, latency, and coarse diagnostics. Response bodies, credentials, and application records are not collected.
-- Monitoring is on-demand only. No scheduled jobs, automatic remediation, or write operations are enabled.
+- Monitoring history is stored separately from integration requests. The agent endpoint does not persist prompts or application payloads.
+- Monitoring is on-demand and scheduled health sampling only. No automatic remediation or write operations are enabled.

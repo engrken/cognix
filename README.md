@@ -14,18 +14,18 @@ COGNIX provides a governed API, agent orchestration, application-scoped tools, m
 
 | App | Initial capabilities | Access |
 |---|---|---|
-| SAGA | Academic summaries, class performance, attendance insights, teacher assistance | Read-only |
-| CLEAR Sys | Collections and financial summaries, audit assistance, clearance support | Read-only |
-| ROAMPH | Fleet utilization, booking summaries, overdue rentals, payment-status analysis | Read-only |
+| SAGA | Aggregate teacher summaries | Read-only |
+| CLEAR Sys | Planned operational summaries and audit assistance | Not enabled |
+| ROAMPH | Planned fleet and rental operations summaries | Not enabled |
 
 ## Architecture
 
-- API layer: stable server-to-server interface.
-- Authentication: service credential plus application-side end-user authorization.
-- Orchestrator: policy checks, tool selection, and model invocation.
-- Tool registry: explicit application-scoped allow-list.
+- API layer: versioned server-to-server interface at `POST /api/v1/agent`.
+- Authentication: distinct service credential per application, with a SAGA-only legacy credential fallback.
+- Authorization: each application retains ownership of end-user, tenant, role, and record-level permissions.
+- Orchestrator: explicit application/task allow-list; disabled capabilities fail closed.
 - Model adapter: provider-neutral boundary with usage budgets.
-- Audit layer: redacted execution metadata and outcomes.
+- Audit layer: redacted execution metadata; persistent audit storage is a later milestone.
 
 See docs/ARCHITECTURE.md, docs/SECURITY.md, and docs/INTEGRATION.md.
 
@@ -35,41 +35,33 @@ Requires Node.js 20.9+ and npm.
 
 1. Run npm install.
 2. Copy .env.example to .env.local.
-3. Set COGNIX_API_KEY to a long random secret.
+3. Set `COGNIX_API_KEY` or `COGNIX_SAGA_API_KEY` to a long random secret for the SAGA pilot.
 4. Run npm run dev.
 5. Open http://localhost:3000/api/health.
 
 ## v1 safety rules
 
-1. Read-only tools by default.
+1. Read-only capabilities only.
 2. Each application enforces its own user, tenant, role, and record permissions.
 3. COGNIX does not connect directly to production application databases.
 4. No autonomous grading, financial, booking, payment, or clearance mutations.
-5. One model call per task by default; enforce token and request budgets.
+5. One model invocation per task by default; enforce token and request budgets.
 6. Never log raw prompts, credentials, student records, financial details, or payment data.
 
 ## Roadmap
 
 - [x] Repository foundation and architecture boundaries
-- [x] Health endpoint and service-authentication foundation
-- [ ] Model adapter and budget configuration
-- [ ] First read-only tool for each application
-- [ ] Structured audit persistence
-- [ ] Integration tests and deployment
+- [x] Health endpoint and service authentication
+- [x] Model adapter and budget configuration
+- [x] Versioned v1 agent API and SAGA compatibility adapter
+- [ ] CLEAR Sys application credential and first read-only capability
+- [ ] ROAMPH application credential and first read-only capability
+- [ ] Structured audit persistence and approvals
+- [ ] Integration tests and expanded operational controls
 - [ ] Human-approved write workflows after security review
 
-No production integrations or paid infrastructure are provisioned by this scaffold.
-
+No production application database is provisioned or directly connected to COGNIX.
 
 ## System Admin monitoring
 
-The protected `/admin` dashboard provides on-demand HTTP availability checks for COGNIX, SAGA, CLEAR Sys, and ROAMPH. The monitor is read-only, uses a fixed HTTPS endpoint allow-list, and does not inspect application records or connect to application databases. It does not run in the background.
-
-Before enabling admin access, configure these sensitive production environment variables in Vercel:
-
-- `COGNIX_ADMIN_PASSWORD`: a unique, high-entropy administrator password of at least 16 characters.
-- `COGNIX_ADMIN_SESSION_SECRET`: a separate random secret of at least 32 characters.
-
-The admin session is an HTTP-only, Secure-in-production, SameSite=Strict signed cookie with a 12-hour lifetime. If either variable is missing, the dashboard remains locked. Rotate the session secret to invalidate existing sessions.
-
-The first monitoring milestone measures HTTP reachability and response latency only. Deployment history, database health, security events, and AI-generated incident analysis are intentionally deferred until dedicated, authenticated data sources and retention controls are designed.
+The protected `/admin` dashboard provides live HTTP readiness checks for COGNIX, SAGA, CLEAR Sys, and ROAMPH. Persistent sample and incident history is stored in a private Vercel Blob. The monitor uses a fixed HTTPS endpoint allow-list and does not inspect application records or connect to application databases. Admin-triggered checks and the scheduled monitoring route are separate from application agent requests.
