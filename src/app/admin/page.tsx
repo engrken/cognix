@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { ADMIN_COOKIE, isAdminConfigured, verifyAdminSession } from "@/lib/admin-session";
 import { getSystemStatus } from "@/lib/system-monitor";
+import OperationsAgent from "./operations-agent";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -138,6 +139,8 @@ export default async function AdminPage({
           <h2 style={{ fontSize: 20 }}>Recommended checks</h2>
           {status.recommendations.length === 0 ? <p style={{ color: "#74dfb0" }}>No availability issues detected in this check.</p> : <ul style={{ paddingLeft: 22, color: "#c5d1e1", lineHeight: 1.8 }}>{status.recommendations.map((item) => <li key={item.service}><strong>{item.service} ({item.priority})</strong>: {item.action}</li>)}</ul>}
         </section>
+
+        <OperationsAgent />
 
         <footer style={{ marginTop: 36, paddingTop: 18, borderTop: "1px solid #26364e", color: "#718198", fontSize: 12, lineHeight: 1.7 }}>
           {status.scope}<br />Checks run daily automatically and whenever the dashboard is opened. Availability percentages reflect recorded samples, not continuous minute-by-minute uptime.
