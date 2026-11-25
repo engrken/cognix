@@ -6,6 +6,7 @@ type ReportPayload = {
   report?: string;
   generatedAt?: string;
   historySamples?: number;
+  historyWriteSucceeded?: boolean;
   usage?: { inputTokens?: number; outputTokens?: number; totalTokens?: number } | null;
   message?: string;
 };
@@ -15,6 +16,7 @@ export default function OperationsAgent() {
   const [report, setReport] = useState("");
   const [generatedAt, setGeneratedAt] = useState("");
   const [historySamples, setHistorySamples] = useState<number | null>(null);
+  const [historyWriteSucceeded, setHistoryWriteSucceeded] = useState<boolean | null>(null);
   const [usage, setUsage] = useState<ReportPayload["usage"]>(null);
   const [error, setError] = useState("");
 
@@ -25,6 +27,7 @@ export default function OperationsAgent() {
     setReport("");
     setGeneratedAt("");
     setHistorySamples(null);
+    setHistoryWriteSucceeded(null);
     setUsage(null);
 
     try {
@@ -41,6 +44,7 @@ export default function OperationsAgent() {
       setReport(payload.report);
       setGeneratedAt(payload.generatedAt || "");
       setHistorySamples(typeof payload.historySamples === "number" ? payload.historySamples : null);
+      setHistoryWriteSucceeded(typeof payload.historyWriteSucceeded === "boolean" ? payload.historyWriteSucceeded : null);
       setUsage(payload.usage ?? null);
     } catch {
       setError("COGNIX could not reach the report service. The live monitoring dashboard is still available.");
@@ -67,7 +71,7 @@ export default function OperationsAgent() {
         <div style={{ marginTop: 18, padding: 18, borderRadius: 10, border: "1px solid #30435e", background: "#080f1c" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", color: "#8fa4c0", fontSize: 12, marginBottom: 12 }}>
             <span>Generated {generatedAt ? new Date(generatedAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" }) : "just now"}</span>
-            <span>{historySamples === null ? "History unavailable" : historySamples + " recorded samples"}{usage?.outputTokens ? " · " + usage.outputTokens + " output tokens" : ""}</span>
+            <span>{historySamples === null ? "History unavailable" : historySamples + " recorded samples"}{historyWriteSucceeded === true ? " · Latest check saved" : historyWriteSucceeded === false ? " · Latest check not saved" : ""}{usage?.outputTokens ? " · " + usage.outputTokens + " output tokens" : ""}</span>
           </div>
           <pre style={{ margin: 0, color: "#d7e2f2", fontFamily: "inherit", fontSize: 14, lineHeight: 1.75, whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}>{report}</pre>
         </div>
