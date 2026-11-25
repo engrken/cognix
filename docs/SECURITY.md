@@ -4,7 +4,7 @@
 
 - No application capability is enabled by default.
 - The static agent registry is the reviewed inventory; unregistered, disabled, planned, or unimplemented capabilities fail closed.
-- A registry entry is not by itself permission to execute. Enabling a capability requires implementation, code review, privacy review, provider review (when a model is involved), and deployment.
+- Enabling a capability requires implementation, code review, purpose and necessity review, provider review (when a model is involved), and deployment.
 - The COGNIX Agent API does not persist integration prompts or payloads.
 
 ## Authentication and authorization
@@ -12,7 +12,6 @@
 - Require a high-entropy server-to-server bearer token for every application.
 - Use separate server-only credentials: `COGNIX_SAGA_API_KEY`, `COGNIX_CLEAR_API_KEY`, and `COGNIX_ROAMPH_API_KEY`.
 - The legacy `COGNIX_API_KEY` is accepted only as a backward-compatible SAGA credential.
-- Store credentials only in server-side environment variables. Rotate exposed credentials; never commit secrets.
 - Service authentication is not end-user authorization. Each application independently enforces the current user's permissions, tenant scope, and record access.
 - Never trust an app name, user ID, role, tenant ID, or permission claim supplied only by a model or browser.
 
@@ -25,6 +24,15 @@
 - Review model provider retention, training/improvement use, data processing terms, and region before sending non-public application data.
 - Do not treat aggregate information as automatically anonymous.
 - Define retention and deletion rules before adding persistent audit storage.
+
+## Academic Agent boundary
+
+- Enabled only for general lesson outlines, study guides, and practice questions from generic topics.
+- Does not connect to SAGA databases or retrieve user, school, class, learner, grade, score, or attendance records.
+- The SAGA server adapter requires an authenticated, non-demo teacher and enforces an application-side rate limit.
+- AI Gateway virtual model `vmc/academic-assistant` enforces the no-prompt-training provider filter centrally. This does not guarantee provider zero data retention.
+- The UI must disclose external model processing and prohibit personal or confidential input.
+- Outputs are drafts; teachers must review accuracy and suitability before use.
 
 ## Tool safety
 
@@ -47,7 +55,7 @@
 - [ ] Restrict access to logs and environment settings.
 - [ ] Confirm HTTPS and deployment access controls.
 - [ ] Add rate limiting and request budgets before external exposure.
-- [ ] Review data processing and retention before sending real user data to a model.
+- [ ] Review data processing and retention before sending non-public application data.
 
 ## System Admin dashboard
 

@@ -14,7 +14,7 @@ COGNIX provides a versioned server-to-server API, a default-deny capability regi
 
 | App | Integration | Capability policy |
 |---|---|---|
-| SAGA | Initial server adapter exists; experimental call disabled | Teacher-summary disabled pending privacy review |
+| SAGA | Server-side adapter | Generic academic resource drafting enabled; teacher-summary reporting disabled |
 | CLEAR Sys | Not connected | Planned; model access blocked |
 | ROAMPH | Not connected | Planned; model access blocked |
 
@@ -26,18 +26,14 @@ COGNIX provides a versioned server-to-server API, a default-deny capability regi
 - Applications retain their own users, tenant scope, records, and business rules.
 - No direct production database connections from COGNIX.
 - No application data is shared by default.
-- Each proposed capability requires a defined purpose, necessity/proportionality review, minimum-data contract, and provider-retention review before model access.
-- Prefer local deterministic processing when it accomplishes the task without disclosing application data.
+- The Academic Agent creates generic lesson outlines, study guides, and practice questions from user-selected topic settings only.
+- The Academic Agent uses an AI Gateway virtual model that filters out providers that train on prompts. This is not a zero-data-retention guarantee.
+- No student/teacher records, grades, scores, attendance, rosters, or school-private material may be submitted.
 - No autonomous business-record mutations.
 
 ## Operations and administration
 
-The protected `/admin` dashboard provides:
-- Live health checks and persistent availability/incident history.
-- Read-only System Operations Agent reports using COGNIX technical health metadata.
-- Agent registry showing application owners, capability states, data boundaries, approval requirements, and model-access state.
-
-The registry is an inventory and policy control plane, not a dynamic permission editor. Capability changes require reviewed code changes and deployment.
+The protected `/admin` dashboard provides live health checks, persistent availability/incident history, read-only System Operations Agent reports, and the agent registry/policy inventory.
 
 ## Local development
 
@@ -55,13 +51,12 @@ Requires Node.js 20.9+ and npm.
 - [x] Health endpoint and service authentication
 - [x] Model adapter and budget configuration
 - [x] Versioned v1 agent API
-- [x] Privacy-first static agent registry and default-deny API policy
-- [x] Admin registry and policy inventory
+- [x] Privacy-first agent registry and default-deny policy
+- [x] Generic Academic Agent with no-prompt-training provider routing
 - [x] System Admin monitoring and persistent history
-- [ ] Approved, minimum-data application capabilities
+- [ ] CLEAR Sys and ROAMPH capabilities after purpose and privacy review
 - [ ] Structured, redacted integration audit
 - [ ] Agent orchestration and human approval workflows
-- [ ] Application-specific adapters after privacy and security review
 - [ ] Expanded integration tests and operational controls
 
 No production application database is provisioned or directly connected to COGNIX.

@@ -39,8 +39,8 @@ type GatewayResponse = {
   };
 };
 
-async function readModelConfig() {
-  const model = process.env.AI_GATEWAY_MODEL?.trim();
+async function readModelConfig(modelOverride?: string) {
+  const model = modelOverride?.trim() || process.env.AI_GATEWAY_MODEL?.trim();
   let oidcToken = "";
 
   // Vercel injects the OIDC token into the function request context,
@@ -76,8 +76,9 @@ export async function generateModelText(input: {
   system: string;
   prompt: string;
   maxOutputTokens?: number;
+  model?: string;
 }): Promise<ModelResult> {
-  const { model, token } = await readModelConfig();
+  const { model, token } = await readModelConfig(input.model);
 
   // The bounded operations-report instructions are currently ~4.1k characters.
   // Keep headroom for policy updates without misclassifying a valid prompt as missing configuration.
@@ -113,7 +114,7 @@ export async function generateModelText(input: {
           max_tokens: maxTokens,
           // Nemotron defaults to reasoning; disable it for this short, bounded summary
           // so the output budget is reserved for the user-visible answer.
-          reasoning: { effort: "none" },
+          ...(model.startsWith("nvidia/") ? { reasoning: { effort: "none" } } : {}),
           temperature: 0.2,
           stream: false,
         }),
