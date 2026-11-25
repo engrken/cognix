@@ -100,8 +100,10 @@ export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashb
     availability: [],
     incidents: [],
   };
+  let historyWriteSucceeded = false;
   try {
     await recordMonitorSnapshot({ checkedAt, services }, source);
+    historyWriteSucceeded = true;
     history = await getMonitorHistory();
   } catch {
     // Keep the live health check available even if history storage is temporarily unavailable.
@@ -119,6 +121,7 @@ export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashb
     services,
     recommendations,
     history,
+    historyWriteSucceeded,
     scope: "HTTP readiness checks and a minimal database connectivity probe where configured; no application tables, user records, or secrets are read.",
   };
 }
