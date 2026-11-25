@@ -1,4 +1,4 @@
-import { get, head, put } from "@vercel/blob";
+import { BlobNotFoundError, get, head, put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
 
 export type HistoryServiceStatus = "healthy" | "degraded" | "unhealthy";
@@ -61,27 +61,30 @@ function emptyHistory(available = true): MonitorHistory {
   };
 }
 
-async function readDocument(): Promise<{ document: HistoryDocument; etag: string | null }> {
+async function readDocument(options: { includeWriteEtag?: boolean } = {}): Promise<{ document: HistoryDocument; etag: string | null }> {
+  // For read-modify-write operations, capture the current ETag before reading
+  // the content. A concurrent update after this point makes the conditional
+  // put fail safely, and the caller retries from a fresh read.
+  let etag: string | null = null;
+  if (options.includeWriteEtag) {
+    try {
+      etag = (await head(HISTORY_PATH)).etag;
+    } catch (error) {
+      if (!(error instanceof BlobNotFoundError)) throw error;
+    }
+  }
+
   const result = await get(HISTORY_PATH, { access: "private", useCache: false });
   if (!result || result.statusCode !== 200 || !result.stream) {
-    return { document: { version: 1, snapshots: [] }, etag: null };
+    return { document: { version: 1, snapshots: [] }, etag };
   }
 
   const raw = await new Response(result.stream).text();
   const parsed = JSON.parse(raw) as Partial<HistoryDocument>;
   const snapshots = Array.isArray(parsed.snapshots) ? parsed.snapshots : [];
-
-  // Confirm the ETag against the current object metadata before using it for
-  // a conditional write. If the blob changed during the content read, the
-  // caller's retry loop will re-read the document and its current ETag.
-  const metadata = await head(HISTORY_PATH);
-  if (metadata.etag !== result.blob.etag) {
-    throw new Error("Monitor history changed during read; retry with fresh metadata.");
-  }
-
   return {
     document: { version: 1, snapshots: snapshots.filter(isSnapshot).slice(-MAX_SNAPSHOTS) },
-    etag: metadata.etag,
+    etag,
   };
 }
 
@@ -129,7 +132,7 @@ export async function recordMonitorSnapshot(
   let lastError: unknown;
   for (let attempt = 0; attempt < 6; attempt += 1) {
     try {
-      const current = await readDocument();
+      const current = await readDocument({ includeWriteEtag: true });
       const alreadyRecorded = current.document.snapshots.some((item) => item.id === snapshot.id);
       const next: HistoryDocument = {
         version: 1,
