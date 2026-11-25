@@ -104,8 +104,29 @@ export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashb
   try {
     await recordMonitorSnapshot({ checkedAt, services }, source);
     historyWriteSucceeded = true;
+    console.info("COGNIX monitor snapshot persisted", { source, checkedAt });
     history = await getMonitorHistory();
-  } catch {
+  } catch (error) {
+    // Log only allow-listed error metadata; never emit tokens, URLs, request bodies, or raw messages.
+    const candidate = error && typeof error === "object"
+      ? error as { name?: unknown; code?: unknown; status?: unknown; statusCode?: unknown }
+      : {};
+    const errorCode = typeof candidate.code === "string" && /^[A-Z0-9_]{1,40}$/i.test(candidate.code)
+      ? candidate.code
+      : null;
+    const httpStatus = typeof candidate.status === "number"
+      ? candidate.status
+      : typeof candidate.statusCode === "number"
+        ? candidate.statusCode
+        : null;
+    console.error("COGNIX monitor snapshot persistence failed", {
+      source,
+      checkedAt,
+      errorName: typeof candidate.name === "string" ? candidate.name.slice(0, 60) : "UnknownError",
+      errorCode,
+      httpStatus,
+    });
+
     // Keep the live health check available even if history storage is temporarily unavailable.
     try {
       history = await getMonitorHistory();
