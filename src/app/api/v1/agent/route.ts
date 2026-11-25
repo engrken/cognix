@@ -31,16 +31,7 @@ const LegacySagaRequestSchema = z.object({
 
 const LearningResourceSchema = z.object({
   resourceType: z.enum(["lesson-outline", "study-guide", "practice-questions"]),
-  subject: z.enum([
-    "Mathematics",
-    "Science",
-    "English",
-    "Filipino",
-    "Araling Panlipunan",
-    "Computer Studies",
-    "Technology and Livelihood Education",
-    "General",
-  ]),
+  subject: z.string().trim().min(2).max(160),
   level: z.enum([
     "Elementary",
     "Junior High School",
@@ -49,6 +40,11 @@ const LearningResourceSchema = z.object({
     "Adult Learning",
   ]),
   topic: z.string().trim().min(3).max(120),
+  classContext: z.object({
+    subjectCode: z.string().trim().min(1).max(30),
+    courseYear: z.string().trim().max(80),
+    term: z.string().trim().min(1).max(40),
+  }).strict(),
 }).strict();
 
 type NormalizedRequest = {
@@ -64,16 +60,17 @@ const RESPONSE_HEADERS = {
 };
 
 const ACADEMIC_SYSTEM_PROMPT = [
-  "You are the COGNIX Academic Assistant.",
-  "Create general educational draft materials using only the supplied subject, learning level, resource type, and generic topic.",
+  "You are the COGNIX Academic Assistant for a teacher's selected SAGA class subject.",
+  "Create practical educational draft materials using only the supplied subject title, subject code, course/year label, term, teacher-selected learning level, resource type, and generic topic.",
+  "Keep every explanation, example, objective, and question relevant to the supplied subject and class context; do not substitute a different subject.",
+  "The supplied context is descriptive class metadata, not an official curriculum map. Do not claim official DepEd, CHED, or institutional curriculum alignment, or cite competencies/standards that were not supplied.",
   "Never request, infer, identify, evaluate, rank, or make decisions about an individual learner or teacher.",
   "Do not ask for or process names, student identifiers, class rosters, grades, scores, attendance, contact details, health information, family circumstances, or private school records.",
-  "Do not claim that the draft is officially aligned to a Philippine or institutional curriculum unless that exact standard is explicitly supplied; this system does not supply one.",
   "Use age-appropriate language and accurate explanations. Clearly state assumptions where needed.",
-  "For a lesson outline, include learning objectives, materials, a time-bounded sequence, guided practice, and a formative check.",
+  "For a lesson outline, include suggested learning objectives, materials, a time-bounded sequence, guided practice, and a formative check.",
   "For a study guide, include key ideas, clear explanations, generic examples, and a short self-check with answers.",
   "For practice questions, provide six varied questions and an answer key with brief explanations.",
-  "Make the output practical, organized, concise, and suitable for teacher review. Do not claim to have accessed SAGA or any student record.",
+  "Make the output organized, concise, and suitable for teacher review. Do not claim to have accessed SAGA or any student record.",
 ].join(" ");
 
 function apiError(
@@ -166,11 +163,17 @@ export async function POST(request: Request) {
       return apiError(400, "invalid_input", "Provide a supported resource type, subject, learning level, and generic topic.", normalized);
     }
 
-    if (containsPersonalOrRecordData(parsed.data.topic)) {
+    const classContextText = [
+      parsed.data.subject,
+      parsed.data.classContext.subjectCode,
+      parsed.data.classContext.courseYear,
+      parsed.data.classContext.term,
+    ].join(" ");
+    if (containsPersonalOrRecordData(parsed.data.topic) || containsPersonalOrRecordData(classContextText)) {
       return apiError(
         400,
         "personal_data_not_allowed",
-        "Use a generic academic topic only. Personal details, identifiers, grades, scores, attendance, and student or teacher records are not accepted.",
+        "Use a generic academic topic and non-personal class subject details only. Personal details, identifiers, grades, scores, attendance, and student or teacher records are not accepted.",
         normalized,
       );
     }
@@ -202,7 +205,7 @@ export async function POST(request: Request) {
         answer: result.text,
         warnings: [
           "AI-generated draft: a teacher must review accuracy, age-appropriateness, and curriculum fit before classroom use.",
-          "Only the generic topic and selected resource settings are sent to the model provider. AI Gateway filters out providers that train on prompts; this does not guarantee zero data retention.",
+          "Only the selected class subject metadata, learning level, resource settings, and generic topic are sent to the model provider. SAGA does not send class lists or student academic records. AI Gateway filters out providers that train on prompts; this does not guarantee zero data retention.",
         ],
         usage: result.usage ?? null,
       }, { headers: RESPONSE_HEADERS });

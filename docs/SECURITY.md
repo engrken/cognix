@@ -28,7 +28,7 @@
 ## Academic Agent boundary
 
 - Enabled only for general lesson outlines, study guides, and practice questions from generic topics.
-- Does not connect to SAGA databases or retrieve user, school, class, learner, grade, score, or attendance records.
+- COGNIX does not connect to SAGA databases. The SAGA adapter reads one authenticated teacher-owned Subject row's instructional metadata only; it does not retrieve rosters, enrollments, assessments, learner, grade, score, or attendance records.
 - The SAGA server adapter requires an authenticated, non-demo teacher and enforces an application-side rate limit.
 - AI Gateway virtual model `vmc/academic-assistant` enforces the no-prompt-training provider filter centrally. This does not guarantee provider zero data retention.
 - The UI must disclose external model processing and prohibit personal or confidential input.

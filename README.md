@@ -26,9 +26,9 @@ COGNIX provides a versioned server-to-server API, a default-deny capability regi
 - Applications retain their own users, tenant scope, records, and business rules.
 - No direct production database connections from COGNIX.
 - No application data is shared by default.
-- The Academic Agent creates generic lesson outlines, study guides, and practice questions from user-selected topic settings only.
+- The Academic Agent creates class-contextual lesson outlines, study guides, and practice questions using only a teacher-owned subject's title, code, course/year label, term, and a generic topic.
 - The Academic Agent uses an AI Gateway virtual model that filters out providers that train on prompts. This is not a zero-data-retention guarantee.
-- No student/teacher records, grades, scores, attendance, rosters, or school-private material may be submitted.
+- No student/teacher records, grades, scores, attendance, rosters, assessments, or school-private material may be submitted.
 - No autonomous business-record mutations.
 
 ## Operations and administration

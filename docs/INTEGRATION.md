@@ -20,9 +20,14 @@ Request envelope:
       "requestId": "caller-generated-correlation-id",
       "input": {
         "resourceType": "lesson-outline",
-        "subject": "Science",
+        "subject": "Introduction to Biology",
         "level": "Junior High School",
-        "topic": "The water cycle"
+        "topic": "The water cycle",
+        "classContext": {
+          "subjectCode": "SCI-8",
+          "courseYear": "Grade 8",
+          "term": "Quarter 2"
+        }
       }
     }
 
@@ -30,18 +35,18 @@ Request envelope:
 
 | Application | Capability | State | Data boundary |
 |---|---|---|---|
-| SAGA | `learning-resource` | Enabled | Generic subject, level, resource type, and topic only |
+| SAGA | `learning-resource` | Enabled | Teacher-owned subject title/code, course-year label, term, selected level, resource type, and generic topic |
 | SAGA | `teacher-summary` | Disabled | No teacher or academic records sent |
 | CLEAR Sys | Management assistance | Planned | No financial or management data |
 | ROAMPH | Fleet and rental assistance | Planned | No customer, booking, or payment data |
 
-The Academic Agent generates general lesson outlines, study guides, and practice questions. It does not query SAGA databases or access student/teacher records. The SAGA adapter authenticates an active, non-demo teacher and applies a per-teacher request throttle before calling COGNIX.
+The Academic Agent generates subject-specific lesson outlines, study guides, and practice questions. SAGA authenticates an active, non-demo teacher and looks up only the selected subject row owned by that teacher in the same school, selecting its subject title, course code, course/year label, and term. It does not query rosters, enrollments, assessments, grades, scores, or attendance. The adapter applies a per-teacher request throttle before calling COGNIX. The internal subject ID, school ID, and teacher ID are not sent to COGNIX.
 
 ## Academic model and provider policy
 
 The Academic Agent uses the AI Gateway virtual model `vmc/academic-assistant`. Its centrally managed configuration selects GPT-4.1 mini and enforces `disallowPromptTraining` with providers listed as no-prompt-training eligible by the live Gateway catalog.
 
-This is **not a zero-data-retention guarantee**. Generic topics are still transmitted to an external model provider for inference. The SAGA interface discloses this and prohibits personal, confidential, or record-level information. If no eligible provider is available, the request fails closed instead of falling back to a provider that trains on prompts.
+This is **not a zero-data-retention guarantee**. The selected subject title/code, course/year label, term, learning level, resource type, and generic topic are transmitted to an external model provider for inference. The SAGA interface discloses this and prohibits personal, confidential, or record-level information. No curriculum standards or learning competencies are currently retrieved; generated materials must not be presented as officially curriculum-aligned. If no eligible provider is available, the request fails closed instead of falling back to a provider that trains on prompts.
 
 ## Application credentials
 
