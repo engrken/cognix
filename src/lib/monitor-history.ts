@@ -74,7 +74,7 @@ async function readDocument(): Promise<{ document: HistoryDocument; etag: string
   // Confirm the ETag against the current object metadata before using it for
   // a conditional write. If the blob changed during the content read, the
   // caller's retry loop will re-read the document and its current ETag.
-  const metadata = await head(HISTORY_PATH, { access: "private" });
+  const metadata = await head(HISTORY_PATH);
   if (metadata.etag !== result.blob.etag) {
     throw new Error("Monitor history changed during read; retry with fresh metadata.");
   }
