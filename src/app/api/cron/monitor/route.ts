@@ -16,12 +16,30 @@ export async function GET(request: NextRequest) {
   }
 
   const status = await getSystemStatus("scheduled");
-  return NextResponse.json({
+  const result = {
     checkedAt: status.checkedAt,
     overall: status.overall,
     summary: status.summary,
-    historyRecorded: status.history.available,
-  }, {
+    historyWriteSucceeded: status.historyWriteSucceeded,
+    historySampleCount: status.history.sampleCount,
+  };
+
+  // Log only aggregate operational metadata; never log tokens, service payloads, or application data.
+  const logContext = {
+    checkedAt: status.checkedAt,
+    overall: status.overall,
+    summary: status.summary,
+    historyWriteSucceeded: status.historyWriteSucceeded,
+    historySampleCount: status.history.sampleCount,
+  };
+  if (status.historyWriteSucceeded) {
+    console.info("COGNIX scheduled monitor completed", logContext);
+  } else {
+    console.error("COGNIX scheduled monitor history write failed", logContext);
+  }
+
+  return NextResponse.json(result, {
+    status: status.historyWriteSucceeded ? 200 : 503,
     headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" },
   });
 }
