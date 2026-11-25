@@ -1,4 +1,4 @@
-import { get, put } from "@vercel/blob";
+import { get, head, put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
 
 export type HistoryServiceStatus = "healthy" | "degraded" | "unhealthy";
@@ -70,9 +70,18 @@ async function readDocument(): Promise<{ document: HistoryDocument; etag: string
   const raw = await new Response(result.stream).text();
   const parsed = JSON.parse(raw) as Partial<HistoryDocument>;
   const snapshots = Array.isArray(parsed.snapshots) ? parsed.snapshots : [];
+
+  // Confirm the ETag against the current object metadata before using it for
+  // a conditional write. If the blob changed during the content read, the
+  // caller's retry loop will re-read the document and its current ETag.
+  const metadata = await head(HISTORY_PATH, { access: "private" });
+  if (metadata.etag !== result.blob.etag) {
+    throw new Error("Monitor history changed during read; retry with fresh metadata.");
+  }
+
   return {
     document: { version: 1, snapshots: snapshots.filter(isSnapshot).slice(-MAX_SNAPSHOTS) },
-    etag: result.blob.etag,
+    etag: metadata.etag,
   };
 }
 
