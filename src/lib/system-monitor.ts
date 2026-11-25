@@ -125,6 +125,14 @@ export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashb
       errorName: typeof candidate.name === "string" ? candidate.name.slice(0, 60) : "UnknownError",
       errorCode,
       httpStatus,
+      // Capture a short, redacted provider message so storage failures can be diagnosed.
+      errorMessage: error instanceof Error
+        ? error.message
+            .replace(/(bearer\\s+)[^\\s]+/gi, "$1[REDACTED]")
+            .replace(/(token|secret|authorization)(\\s*[:=]\\s*)[^\\s,;]+/gi, "$1$2[REDACTED]")
+            .replace(/https?:\\/\\/[^\\s]+/gi, "[URL]")
+            .slice(0, 160)
+        : "Unknown persistence error",
     });
 
     // Keep the live health check available even if history storage is temporarily unavailable.
