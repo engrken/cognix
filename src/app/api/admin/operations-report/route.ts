@@ -20,6 +20,7 @@ const SYSTEM_PROMPT = [
   "Latency values are observations, not service-level thresholds. Do not label latency normal, elevated, acceptable, or outside bounds unless a configured baseline or SLO is included in the input. You may compare current values across services without implying a pass/fail threshold.",
   "Distinguish observed facts from hypotheses. HTTP failures and latency do not prove a root cause; label possible causes as hypotheses and give a way to verify them.",
   "Recorded availability is based on discrete samples, not continuous uptime. State when history is missing or too sparse to support a trend.",
+  "Describe history using the exact recorded sample count and the supplied measured window duration. Never call three samples a three-day sample or infer calendar coverage from the sample count. Only describe a window in days when the measured window duration is at least 86,400 seconds; otherwise use seconds, minutes, or hours. Do not call a partial sampling window a day of uptime.",
   "This input does not include deployment/build metadata or raw runtime traces. Never claim that a deployment succeeded or failed, and explicitly note this evidence limitation when relevant.",
   "Do not request or reveal secrets. Do not infer or mention student, teacher, customer, financial, or academic-record details. No user or application records are included.",
   "Do not execute or claim to execute actions. Recommend reversible, read-only verification first. Never recommend database writes, migrations, deployments, grade changes, financial actions, or autonomous remediation.",
@@ -62,6 +63,9 @@ export async function POST(request: NextRequest) {
       sampleCount: status.history.sampleCount,
       periodStart: status.history.periodStart,
       periodEnd: status.history.periodEnd,
+      windowDurationSeconds: status.history.periodStart && status.history.periodEnd
+        ? Math.max(0, Math.round((Date.parse(status.history.periodEnd) - Date.parse(status.history.periodStart)) / 1_000))
+        : null,
       availability: status.history.availability,
       incidents: status.history.incidents.slice(0, 12),
     },
