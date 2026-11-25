@@ -27,7 +27,7 @@ export function hasValidServiceToken(
   if (!configured) return false;
 
   const authorization = request.headers.get("authorization") ?? "";
-  const match = authorization.match(/^Bearer\\s+(.+)$/i);
+  const match = authorization.match(/^Bearer\s+(.+)$/i);
   if (!match) return false;
 
   return safeEqual(match[1], configured);
