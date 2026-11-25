@@ -79,8 +79,10 @@ export async function generateModelText(input: {
 }): Promise<ModelResult> {
   const { model, token } = await readModelConfig();
 
+  // The bounded operations-report instructions are currently ~4.1k characters.
+  // Keep headroom for policy updates without misclassifying a valid prompt as missing configuration.
   if (
-    input.system.length > 4_000 ||
+    input.system.length > 6_000 ||
     input.prompt.length < 1 ||
     input.prompt.length > 12_000
   ) {
