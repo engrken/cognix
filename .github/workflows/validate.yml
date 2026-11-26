@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Typecheck, lint, and production build
+    name: Typecheck, lint, tests, and production build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -37,6 +37,9 @@ jobs:
 
       - name: ESLint
         run: npm run lint
+
+      - name: Remediation planner synthetic tests
+        run: npm run test:planner
 
       - name: Next.js production build
         run: npm run build
