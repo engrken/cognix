@@ -1,5 +1,5 @@
-import { diagnoseErrorEvents, type DiagnosticEvent } from "@/lib/incident-diagnosis";
-import { createRemediationPlan } from "@/lib/remediation-planner";
+import { diagnoseErrorEvents, type DiagnosticEvent } from "./incident-diagnosis";
+import { createRemediationPlan } from "./remediation-planner";
 
 export function buildIncidentIntelligence(events: readonly DiagnosticEvent[]) {
   return diagnoseErrorEvents(events).map((diagnosis) => ({
