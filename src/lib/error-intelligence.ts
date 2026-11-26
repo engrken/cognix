@@ -145,6 +145,8 @@ export async function acceptErrorEvent(event: EventInput, app: CognixApplication
 }
 
 export async function parseErrorEvent(request: Request) {
+  const contentType = request.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
+  if (contentType !== "application/json") return { error: "invalid_content_type" as const };
   const declaredLength = request.headers.get("content-length");
   if (declaredLength && (!/^\\d+$/.test(declaredLength) || Number(declaredLength) > MAX_BODY_BYTES)) {
     return { error: "payload_too_large" as const };
@@ -180,4 +182,11 @@ export async function parseErrorEvent(request: Request) {
   } catch {
     return { error: "invalid_json" as const };
   }
+}
+
+
+export async function getRecentErrorEvents() {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return { available: false, events: [] as StoredEvent[] };
+  const { document } = await readStore(false);
+  return { available: true, events: [...document.events].reverse().slice(0, 100) };
 }
