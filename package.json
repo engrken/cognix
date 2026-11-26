@@ -8,7 +8,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:receiver": "node --experimental-strip-types --test tests/error-intelligence.test.mjs",
+    "test:advisor": "node --experimental-strip-types --test tests/ai-resolution-advisor.test.mjs",
+    "test:planner": "node --experimental-strip-types --test tests/remediation-planner.test.mjs",
+    "test:diagnosis": "node --experimental-strip-types --test tests/incident-diagnosis.test.mjs",
+    "test:phase2": "npm run test:receiver && npm run test:diagnosis && npm run test:advisor && npm run test:planner"
   },
   "dependencies": {
     "@vercel/blob": "^2.9.0",

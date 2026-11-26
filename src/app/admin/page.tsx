@@ -66,7 +66,7 @@ export default async function AdminPage({
     <main style={{ minHeight: "100vh", padding: "32px 20px 64px", background: "#080d18", color: "#eef3ff" }}>
       <div style={{ maxWidth: 1080, margin: "0 auto" }}>
         <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderBottom: "1px solid #26364e", paddingBottom: 20 }}>
-          <div><Link href="/" style={{ color: "#8fc5ff", textDecoration: "none", fontWeight: 800, letterSpacing: ".14em" }}>COGNIX</Link><p style={{ margin: "8px 0 0", color: "#aab8ce" }}>System Admin · Read-only monitoring · <Link href="/admin/learning" style={{ color: "#8fc5ff" }}>LML Incident Learning</Link></p></div>
+          <div><Link href="/" style={{ color: "#8fc5ff", textDecoration: "none", fontWeight: 800, letterSpacing: ".14em" }}>COGNIX</Link><p style={{ margin: "8px 0 0", color: "#aab8ce" }}>System Admin · Read-only monitoring · <Link href="/admin/learning" style={{ color: "#8fc5ff" }}>LML Incident Learning</Link> · <Link href="/admin/errors" style={{ color: "#8fc5ff" }}>Incident Intelligence</Link></p></div>
           <form action="/api/admin/logout" method="post"><button type="submit" style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #40516a", background: "transparent", color: "#d7e2f2" }}>Sign out</button></form>
         </header>
 
