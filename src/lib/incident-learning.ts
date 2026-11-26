@@ -71,7 +71,7 @@ async function readKnowledge(includeEtag = false): Promise<{ document: LearningD
   }
 }
 
-function fingerprintFor(snapshot: MonitorSnapshot, service: MonitorSnapshot["services"][number]) {
+function fingerprintFor(service: MonitorSnapshot["services"][number]) {
   const signal = service.httpStatus !== null && service.httpStatus >= 500
     ? "http-failure"
     : "readiness-failure";
@@ -92,7 +92,7 @@ export async function getLearningPatterns(): Promise<{ available: boolean; patte
   for (const snapshot of snapshots) {
     for (const service of snapshot.services) {
       if (service.status === "healthy") continue;
-      const identity = fingerprintFor(snapshot, service);
+      const identity = fingerprintFor(service);
       const current = groups.get(identity.fingerprint);
       if (current) {
         current.observations += 1;
