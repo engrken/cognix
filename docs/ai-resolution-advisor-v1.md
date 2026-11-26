@@ -18,7 +18,6 @@ Free-tier availability and limits are provider/account-specific and may change. 
 ## Configuration
 
 The advisor is disabled by default. It returns no provider unless all values are explicitly set:
-
 - `COGNIX_AI_ADVISOR_ENABLED=true`
 - `COGNIX_AI_PROVIDER=groq`
 - `COGNIX_AI_API_KEY` (server-only secret)
@@ -33,9 +32,8 @@ Only a strict allowlist is accepted:
 - technical error category, severity, component, dependency code
 - HTTP status class
 - bounded occurrence count and timestamps
-- deterministic hypothesis and bounded deterministic checks
 
-The schema rejects unknown fields. Raw logs, stack traces, request/response bodies, hostnames, URLs, user/tenant identifiers, credentials, and application business data are not accepted.
+The schema rejects unknown fields and all free-form incident text. Raw logs, stack traces, request/response bodies, hostnames, URLs, user/tenant identifiers, credentials, and application business data are not accepted.
 
 ## Output and safety
 
@@ -44,22 +42,20 @@ The model response is parsed and validated against a strict Zod schema. It may r
 - up to three resolution options with explicit risk tiers, preconditions, and verification checks
 - up to three caveats
 
-The system prompt prohibits commands, SQL, code, credentials, tool calls, and business-record changes. The application must still treat every model statement as untrusted. Schema validation checks structure, not factual correctness.
+Output fields are screened for URLs, code fences, common command forms, and common SQL statement forms. This is a conservative content filter, not a proof of safety. All model output remains untrusted, inert advisory text. No commands, SQL, code, or model-supplied actions are ever executed.
 
 No model response means no AI advice; deterministic diagnosis remains available. Provider errors are reduced to safe error codes. No automatic retries or paid fallbacks are performed.
 
-## Verification cases
+## Synthetic verification
 
-Before enabling the provider, validate:
-1. Advisor is unavailable when the feature flag is absent or false.
-2. Unknown input fields are rejected.
-3. A valid allowlisted incident summary is accepted.
-4. API keys never appear in returned errors or logs.
-5. HTTP 429 maps to `rate_limited`; network/5xx errors map to `provider_unavailable`.
-6. Malformed, oversized, or schema-invalid model output is rejected.
-7. Model output containing command-like text remains inert advisory text and is never executed.
-8. Provider failure does not affect deterministic diagnosis.
-9. Synthetic inputs contain no user, tenant, student, teacher, booking, payment, academic, or uploaded-file data.
+`npm run test:advisor` uses Node's built-in test runner and a mocked fetch implementation. It makes no external network calls. Tests cover:
+1. Strict allowlisted input and rejection of unknown/free-form fields.
+2. Disabled-by-default configuration.
+3. Successful structured response parsing and outbound payload inspection.
+4. Input rejection before provider invocation.
+5. HTTP 429 handling.
+6. Malformed, oversized, and unsafe output rejection.
+7. Network failure mapping without leaking provider details.
 
 ## Explicit non-goals
 
