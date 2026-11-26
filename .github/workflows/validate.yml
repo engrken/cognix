@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main, feat/lml-incident-intelligence-foundation]
+    branches: [main, feat/lml-incident-intelligence-foundation, feat/cognix-error-intelligence-receiver]
 
 permissions:
   contents: read
