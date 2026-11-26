@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { ADMIN_COOKIE, verifyAdminSession } from "@/lib/admin-session";
 import { getRecentErrorEvents } from "@/lib/error-intelligence";
+import { diagnoseErrorEvents } from "@/lib/incident-diagnosis";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function ErrorIntelligencePage() {
   }
 
   const result = await getRecentErrorEvents();
+  const diagnoses = diagnoseErrorEvents(result.events);
   return <main style={{ minHeight: "100vh", padding: "32px 20px 64px", background: "#080d18", color: "#eef3ff" }}>
     <div style={{ maxWidth: 1080, margin: "0 auto" }}>
       <header style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", borderBottom: "1px solid #26364e", paddingBottom: 20 }}>
@@ -34,6 +36,17 @@ export default async function ErrorIntelligencePage() {
         <h1 style={{ margin: "10px 0", fontSize: 30 }}>Technical error events</h1>
         <p style={{ margin: 0, color: "#aab8ce", lineHeight: 1.7 }}>Only allowlisted technical metadata is retained. No user identity, request body, raw exception, stack trace, or business record is accepted.</p>
       </section>
+      {result.available && diagnoses.length > 0 && <section style={{ display: "grid", gap: 12, marginBottom: 24 }}>
+        <div><h2 style={{ marginBottom: 6 }}>Diagnostic hypotheses</h2><p style={{ color: "#8fa4c0", marginTop: 0, fontSize: 13 }}>Deterministic, evidence-based suggestions. These are hypotheses, not confirmed root causes or executed repairs.</p></div>
+        {diagnoses.map((diagnosis) => <article key={diagnosis.fingerprint} style={{ padding: 18, border: "1px solid #40516a", borderRadius: 12, background: "#111b2c" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}><strong>{diagnosis.app.toUpperCase()} · {diagnosis.category.replaceAll("_", " ")}</strong><span style={{ color: diagnosis.confidence === "moderate" ? "#f4c66a" : "#8fa4c0", fontSize: 12 }}> {diagnosis.confidence.toUpperCase()} CONFIDENCE</span></div>
+          <h3 style={{ margin: "10px 0 6px" }}>{diagnosis.hypothesis}</h3>
+          <p style={{ color: "#aab8ce", margin: "6px 0" }}>{diagnosis.rationale}</p>
+          <p style={{ color: "#8fa4c0", fontSize: 12 }}>Occurrences: {diagnosis.occurrences} · First: {localDate(diagnosis.firstSeenAt)} · Latest: {localDate(diagnosis.lastSeenAt)}</p>
+          <strong style={{ fontSize: 13 }}>Recommended investigation</strong><ul style={{ color: "#c7d4e7", lineHeight: 1.7, paddingLeft: 20 }}>{diagnosis.recommendedChecks.map((check) => <li key={check}>{check}</li>)}</ul>
+          <p style={{ color: "#f4c66a", fontSize: 12, marginBottom: 0 }}>Manual review only · no repair has been executed</p>
+        </article>)}
+      </section>}
       {!result.available ? <p role="status" style={{ color: "#f4c66a" }}>Private event storage is not configured or unavailable.</p>
         : result.events.length === 0 ? <section style={{ padding: 20, border: "1px solid #26364e", borderRadius: 12, background: "#111b2c" }}><h2>No application error events received</h2><p style={{ color: "#aab8ce" }}>The authenticated receiver is ready. No SAGA, CLEAR Sys, or ROAMPH adapters are connected yet.</p></section>
         : <section style={{ display: "grid", gap: 12 }}>
