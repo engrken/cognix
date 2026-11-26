@@ -119,6 +119,37 @@ const SYSTEM_INSTRUCTIONS = [
   "Use low or moderate confidence only; do not invent probabilities.",
 ].join(" ");
 
+async function readBoundedResponse(response: Response): Promise<string> {
+  if (!response.body) throw new Error("empty_response");
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new Error("response_too_large");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const combined = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(combined);
+}
+
 export function createGroqAiResolutionProvider(config: {
   apiKey: string;
   model: string;
@@ -173,11 +204,7 @@ export function createGroqAiResolutionProvider(config: {
 
       let envelope: unknown;
       try {
-        const body = await response.text();
-        if (new TextEncoder().encode(body).byteLength > MAX_PROVIDER_RESPONSE_BYTES) {
-          throw new Error("response_too_large");
-        }
-        envelope = JSON.parse(body);
+        envelope = JSON.parse(await readBoundedResponse(response));
       } catch {
         throw new AiAdvisorProviderError("invalid_provider_response");
       }
