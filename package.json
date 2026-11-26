@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:receiver": "node --experimental-strip-types --test tests/error-intelligence.test.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.9.0",
