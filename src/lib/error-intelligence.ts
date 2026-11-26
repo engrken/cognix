@@ -148,7 +148,7 @@ export async function parseErrorEvent(request: Request) {
   const contentType = request.headers.get("content-type")?.split(";")[0].trim().toLowerCase();
   if (contentType !== "application/json") return { error: "invalid_content_type" as const };
   const declaredLength = request.headers.get("content-length");
-  if (declaredLength && (!/^\\d+$/.test(declaredLength) || Number(declaredLength) > MAX_BODY_BYTES)) {
+  if (declaredLength && (!/^\d+$/.test(declaredLength) || Number(declaredLength) > MAX_BODY_BYTES)) {
     return { error: "payload_too_large" as const };
   }
   if (!request.body) return { error: "invalid_json" as const };
