@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const learning = await saveVerifiedLearning({
+    await saveVerifiedLearning({
       fingerprint: String(form.get("fingerprint") ?? ""),
       applicationId: String(form.get("applicationId") ?? ""),
       confirmedCause: form.get("confirmedCause"),
