@@ -105,7 +105,7 @@ async function readBoundedText(stream: ReadableStream<Uint8Array>) {
 }
 
 function fingerprintFor(event: EventInput) {
-  const statusClass = event.httpStatus ? `${Math.floor(event.httpStatus / 100)}xx` : "none";
+  const statusClass = event.httpStatus ? (event.httpStatus < 500 ? "4xx" : "5xx") : "none";
   const normalized = [
     event.app, event.category, event.component, event.operationCode ?? "",
     event.dependencyCode ?? "", statusClass,
@@ -157,7 +157,7 @@ export async function acceptErrorEvent(event: EventInput, app: CognixApplication
       severity: event.severity,
       component: event.component,
       operationCode: event.operationCode ?? null,
-      httpStatusClass: event.httpStatus ? `${Math.floor(event.httpStatus / 100)}xx` : "none",
+      httpStatusClass: event.httpStatus ? (event.httpStatus < 500 ? "4xx" : "5xx") : "none",
       dependencyCode: event.dependencyCode ?? null,
       environment: event.environment,
       fingerprint,
