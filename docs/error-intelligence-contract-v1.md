@@ -95,10 +95,11 @@ COGNIX must not automatically retry user operations, modify application data, ch
 - [ ] Review the contract against each source application's error-handling architecture.
 
 ### Stage B — Cognix receiver
-- Add a dedicated server-to-server endpoint.
-- Validate app-scoped service authentication and strict schema.
-- Add bounded request parsing, rate limiting, idempotency, and private event persistence.
-- Add safe operator review without exposing user-identifying information.
+- [x] Add a dedicated server-to-server endpoint at `/api/v1/errors`.
+- [x] Validate app-scoped service authentication and strict schema.
+- [x] Add bounded request parsing, event-age validation, per-app rate limiting, idempotency, and private event persistence.
+- [x] Add an authenticated operator view at `/admin/errors` without user-identifying information.
+- [ ] Validate app adapters and live event delivery before enabling any source application.
 
 ### Stage C — Application adapters
 - Implement server-side adapters in SAGA, CLEAR Sys, and ROAMPH separately.
