@@ -74,7 +74,17 @@ async function readDocument(options: { includeWriteEtag?: boolean } = {}): Promi
     }
   }
 
-  const result = await get(HISTORY_PATH, { access: "private", useCache: false });
+  let result;
+  try {
+    result = await get(HISTORY_PATH, { access: "private", useCache: false });
+  } catch (error) {
+    // A missing history object is the expected empty state on first use.
+    // Keep non-not-found failures visible so genuine storage issues are not hidden.
+    if (error instanceof BlobNotFoundError) {
+      return { document: { version: 1, snapshots: [] }, etag };
+    }
+    throw error;
+  }
   if (!result || result.statusCode !== 200 || !result.stream) {
     return { document: { version: 1, snapshots: [] }, etag };
   }
