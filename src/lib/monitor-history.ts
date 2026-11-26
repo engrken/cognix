@@ -90,10 +90,17 @@ async function readDocument(options: { includeWriteEtag?: boolean } = {}): Promi
 
 export async function getMonitorSnapshots(): Promise<MonitorSnapshot[]> {
   if (!process.env.BLOB_READ_WRITE_TOKEN) return [];
-  const { document } = await readDocument();
-  return [...document.snapshots].sort(
-    (a, b) => Date.parse(a.checkedAt) - Date.parse(b.checkedAt),
-  );
+  try {
+    const { document } = await readDocument();
+    return [...document.snapshots].sort(
+      (a, b) => Date.parse(a.checkedAt) - Date.parse(b.checkedAt),
+    );
+  } catch (error) {
+    // An empty history is a valid first-run state for the learning layer.
+    // Preserve all other storage and parsing errors for operational visibility.
+    if (error instanceof BlobNotFoundError) return [];
+    throw error;
+  }
 }
 
 function isSnapshot(value: unknown): value is MonitorSnapshot {
