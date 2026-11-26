@@ -80,7 +80,7 @@ async function readKnowledge(includeEtag = false): Promise<{ document: LearningD
 }
 
 function fingerprintFor(service: MonitorSnapshot["services"][number]) {
-  const signal = service.httpStatus !== null && service.httpStatus >= 500
+  const signal: LearningPattern["signal"] = service.httpStatus !== null && service.httpStatus >= 500
     ? "http-failure"
     : "readiness-failure";
   const statusClass = service.httpStatus === null ? "no-http" : `${Math.floor(service.httpStatus / 100)}xx`;
