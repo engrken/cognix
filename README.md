@@ -14,7 +14,7 @@ COGNIX provides a versioned server-to-server API, a default-deny capability regi
 
 | App | Integration | Capability policy |
 |---|---|---|
-| SAGA | Server-side adapter | Generic academic resource drafting enabled; teacher-summary reporting disabled |
+| SAGA | Server-side adapter | Fixed-topic system-use guidance enabled; lesson-resource generation and teacher-summary reporting disabled |
 | CLEAR Sys | Not connected | Planned; model access blocked |
 | ROAMPH | Not connected | Planned; model access blocked |
 
@@ -26,9 +26,11 @@ COGNIX provides a versioned server-to-server API, a default-deny capability regi
 - Applications retain their own users, tenant scope, records, and business rules.
 - No direct production database connections from COGNIX.
 - No application data is shared by default.
-- The Academic Agent creates class-contextual lesson outlines, study guides, and practice questions using only a teacher-owned subject's title, code, course/year label, term, and a generic topic.
-- The Academic Agent uses an AI Gateway virtual model that filters out providers that train on prompts. This is not a zero-data-retention guarantee.
-- No student/teacher records, grades, scores, attendance, rosters, assessments, or school-private material may be submitted.
+- SAGA's Virtual Assistant provides generic how-to guidance and read-only workspace answers. SAGA performs all authentication, ownership checks, and academic-data queries locally.
+- For SAGA system help, COGNIX receives only one fixed, allowlisted help-topic identifier. The teacher's typed question, class context, and academic records are not sent.
+- The SAGA system-help model filters out providers that train on prompts. This is not a zero-data-retention guarantee.
+- The former lesson-outline, study-guide, and practice-question generation capability is disabled.
+- The separate teacher-summary capability remains disabled.
 - No autonomous business-record mutations.
 
 ## Operations and administration
@@ -52,7 +54,7 @@ Requires Node.js 20.9+ and npm.
 - [x] Model adapter and budget configuration
 - [x] Versioned v1 agent API
 - [x] Privacy-first agent registry and default-deny policy
-- [x] Generic Academic Agent with no-prompt-training provider routing
+- [x] SAGA fixed-topic system-help capability with no-prompt-training provider routing
 - [x] System Admin monitoring and persistent history
 - [ ] CLEAR Sys and ROAMPH capabilities after purpose and privacy review
 - [ ] Structured, redacted integration audit

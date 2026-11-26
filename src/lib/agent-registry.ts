@@ -1,7 +1,7 @@
 export type CognixAppId = "saga" | "clear" | "roamph";
 export type CapabilityState = "enabled" | "disabled" | "planned";
 
-export const AGENT_REGISTRY_VERSION = "1";
+export const AGENT_REGISTRY_VERSION = "2";
 
 /**
  * Static, reviewed policy inventory. This is not a permissions database:
@@ -29,11 +29,20 @@ export const AGENT_REGISTRY = {
         {
           id: "learning-resource",
           name: "Academic resource drafting",
+          state: "disabled",
+          modelAccess: "blocked",
+          dataClass: "Retired generic educational-content generation",
+          approval: "retired",
+          reason: "The former lesson-outline, study-guide, and practice-question generator is retired. Requests fail closed before any model call or SAGA record access.",
+        },
+        {
+          id: "system-help",
+          name: "SAGA system help",
           state: "enabled",
           modelAccess: "enabled",
-          dataClass: "Teacher-owned subject title/code, course-year label, term, learning level, resource type, and generic topic",
-          approval: "non-personal-content-only; teacher review required",
-          reason: "Enabled only for class-contextual lesson outlines, study guides, and practice questions. SAGA reads one teacher-owned Subject row's instructional metadata only; no rosters, enrollments, assessments, grades, scores, or attendance are queried or sent. AI Gateway routes only to providers marked no-prompt-training; zero data retention is not guaranteed.",
+          dataClass: "One fixed, allowlisted SAGA help-topic identifier",
+          approval: "generic-system-guidance-only",
+          reason: "Enabled only for general SAGA feature-use instructions. The SAGA adapter sends one fixed topic code and never sends the teacher's freeform message, class identifier, workspace metadata, student information, grades, scores, attendance, rosters, or academic records. AI Gateway filters out providers that train on prompts; zero data retention is not guaranteed.",
         },
       ],
     },
@@ -86,14 +95,14 @@ export const AGENT_REGISTRY = {
       approval: "admin-session-required",
     },
     {
-      id: "academic-assistant",
-      name: "Academic Agent",
+      id: "saga-virtual-assistant",
+      name: "SAGA Virtual Assistant",
       owner: "SAGA",
       state: "enabled",
-      scope: "Create subject-specific lesson outlines, study guides, and practice questions using a teacher-owned SAGA class subject's instructional metadata, selected learning level, resource type, and generic topic.",
-      dataBoundary: "The SAGA adapter reads only one authenticated teacher-owned Subject row's title, course code, course/year label, and term. COGNIX receives those instructional fields plus the chosen learning level, resource type, and generic topic; no rosters, enrollments, assessments, grades, scores, attendance, or personal records are sent. AI Gateway filters for no-prompt-training providers; zero data retention is not guaranteed.",
+      scope: "General SAGA feature-use guidance plus read-only questions about the teacher's currently open class workspace. Class data is queried and answered inside SAGA.",
+      dataBoundary: "COGNIX receives only one fixed, allowlisted help-topic identifier for general system guidance. It receives no freeform teacher message, class identifier, class metadata, student attributes, grade, score, attendance, roster, or other academic record. Workspace answers are produced locally by the SAGA adapter after teacher and school ownership checks.",
       modelAccess: "enabled",
-      approval: "non-personal-content-only; teacher review required",
+      approval: "fixed-topic-system-guidance-only",
     },
     {
       id: "management-assistant",

@@ -11,42 +11,33 @@ Headers:
 - `Authorization: Bearer <application-specific service token>`
 - `Content-Type: application/json`
 
-Request envelope:
+The current SAGA capability is generic system-use guidance only:
 
     {
       "apiVersion": "1",
       "app": "saga",
-      "task": "learning-resource",
+      "task": "system-help",
       "requestId": "caller-generated-correlation-id",
-      "input": {
-        "resourceType": "lesson-outline",
-        "subject": "Introduction to Biology",
-        "level": "Junior High School",
-        "topic": "The water cycle",
-        "classContext": {
-          "subjectCode": "SCI-8",
-          "courseYear": "Grade 8",
-          "term": "Quarter 2"
-        }
-      }
+      "input": { "topic": "score-entry" }
     }
+
+The `topic` is one of a fixed, allowlisted enum (for example `class-roster`, `grading-setup`, `assessments`, `score-entry`, `attendance`, or `final-grades`). SAGA classifies the teacher's typed question locally and sends only the fixed topic code. COGNIX does not receive the freeform question, user identity, subject/class identifiers, class metadata, rosters, student data, grades, scores, attendance marks, or other academic records.
 
 ## Enabled and disabled capabilities
 
 | Application | Capability | State | Data boundary |
 |---|---|---|---|
-| SAGA | `learning-resource` | Enabled | Teacher-owned subject title/code, course-year label, term, selected level, resource type, and generic topic |
+| SAGA | `system-help` | Enabled | One fixed allowlisted SAGA help-topic identifier only |
+| SAGA | `learning-resource` | Disabled | Former generic lesson-material generation is retired |
 | SAGA | `teacher-summary` | Disabled | No teacher or academic records sent |
 | CLEAR Sys | Management assistance | Planned | No financial or management data |
 | ROAMPH | Fleet and rental assistance | Planned | No customer, booking, or payment data |
 
-The Academic Agent generates subject-specific lesson outlines, study guides, and practice questions. SAGA authenticates an active, non-demo teacher and looks up only the selected subject row owned by that teacher in the same school, selecting its subject title, course code, course/year label, and term. It does not query rosters, enrollments, assessments, grades, scores, or attendance. The adapter applies a per-teacher request throttle before calling COGNIX. The internal subject ID, school ID, and teacher ID are not sent to COGNIX.
+## System-help model and provider policy
 
-## Academic model and provider policy
+The SAGA Virtual Assistant uses the AI Gateway virtual model `vmc/saga-system-help`, targeting `openai/gpt-4.1-mini`. Its configuration sets `disallowPromptTraining` and restricts routing to approved Azure/OpenAI providers. The model receives only a fixed help-topic code and generates generic product-use instructions from the SAGA feature notes in the system prompt.
 
-The Academic Agent uses the AI Gateway virtual model `vmc/academic-assistant`. Its centrally managed configuration selects GPT-4.1 mini and enforces `disallowPromptTraining` with providers listed as no-prompt-training eligible by the live Gateway catalog.
-
-This is **not a zero-data-retention guarantee**. The selected subject title/code, course/year label, term, learning level, resource type, and generic topic are transmitted to an external model provider for inference. The SAGA interface discloses this and prohibits personal, confidential, or record-level information. No curriculum standards or learning competencies are currently retrieved; generated materials must not be presented as officially curriculum-aligned. If no eligible provider is available, the request fails closed instead of falling back to a provider that trains on prompts.
+This is **not a zero-data-retention guarantee**. No personal or academic data is included in the COGNIX request. If COGNIX or the model provider is unavailable, SAGA falls back to built-in help instructions.
 
 ## Application credentials
 
@@ -65,9 +56,7 @@ Each application remains authoritative for its own users, permissions, records, 
 ## Data minimization
 
 - No application data is shared by default.
-- The Academic Agent accepts only a short generic topic plus fixed subject, level, and resource-type selections.
-- The API rejects common email/phone/identifier patterns and record-like text; this screening is supplemental, not a substitute for the user-facing warning or governance.
-- Do not submit names, student identifiers, grades, scores, attendance, rosters, contact details, health information, family circumstances, or confidential school material.
+- SAGA's workspace-aware academic questions are queried and answered locally by SAGA. No academic record is sent to COGNIX.
+- COGNIX receives only the fixed `system-help` topic code; the SAGA adapter does not forward teacher messages or workspace context.
 - The endpoint does not log prompts or generated answers and does not persist requests.
-- Outputs are drafts and require teacher review.
 - No autonomous grading, student evaluation, attendance action, or record mutation is enabled.

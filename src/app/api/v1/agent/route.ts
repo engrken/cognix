@@ -22,6 +22,8 @@ const VersionedRequestSchema = z.object({
   requestId: RequestIdSchema.optional(),
 }).strict();
 
+// Retain the legacy envelope only so the old teacher-summary call is rejected
+// by the capability registry with an explicit disabled-policy response.
 const LegacySagaRequestSchema = z.object({
   app: z.literal("saga"),
   task: z.string().trim().min(1).max(512),
@@ -29,22 +31,21 @@ const LegacySagaRequestSchema = z.object({
   requestId: RequestIdSchema.optional(),
 }).strict();
 
-const LearningResourceSchema = z.object({
-  resourceType: z.enum(["lesson-outline", "study-guide", "practice-questions"]),
-  subject: z.string().trim().min(2).max(160),
-  level: z.enum([
-    "Elementary",
-    "Junior High School",
-    "Senior High School",
-    "Higher Education",
-    "Adult Learning",
+const SystemHelpSchema = z.object({
+  topic: z.enum([
+    "class-navigation",
+    "class-roster",
+    "grading-setup",
+    "assessments",
+    "score-entry",
+    "attendance",
+    "class-activities",
+    "final-grades",
+    "grade-visibility",
+    "profile-security",
+    "class-chats",
+    "privacy",
   ]),
-  topic: z.string().trim().min(3).max(120),
-  classContext: z.object({
-    subjectCode: z.string().trim().min(1).max(30),
-    courseYear: z.string().trim().max(80),
-    term: z.string().trim().min(1).max(40),
-  }).strict(),
 }).strict();
 
 type NormalizedRequest = {
@@ -59,18 +60,26 @@ const RESPONSE_HEADERS = {
   "X-Robots-Tag": "noindex, nofollow",
 };
 
-const ACADEMIC_SYSTEM_PROMPT = [
-  "You are the COGNIX Academic Assistant for a teacher's selected SAGA class subject.",
-  "Create practical educational draft materials using only the supplied subject title, subject code, course/year label, term, teacher-selected learning level, resource type, and generic topic.",
-  "Keep every explanation, example, objective, and question relevant to the supplied subject and class context; do not substitute a different subject.",
-  "The supplied context is descriptive class metadata, not an official curriculum map. Do not claim official DepEd, CHED, or institutional curriculum alignment, or cite competencies/standards that were not supplied.",
-  "Never request, infer, identify, evaluate, rank, or make decisions about an individual learner or teacher.",
-  "Do not ask for or process names, student identifiers, class rosters, grades, scores, attendance, contact details, health information, family circumstances, or private school records.",
-  "Use age-appropriate language and accurate explanations. Clearly state assumptions where needed.",
-  "For a lesson outline, include suggested learning objectives, materials, a time-bounded sequence, guided practice, and a formative check.",
-  "For a study guide, include key ideas, clear explanations, generic examples, and a short self-check with answers.",
-  "For practice questions, provide six varied questions and an answer key with brief explanations.",
-  "Make the output organized, concise, and suitable for teacher review. Do not claim to have accessed SAGA or any student record.",
+const SYSTEM_HELP_PROMPT = [
+  "You are the SAGA Virtual Assistant's product-use guide, operating through COGNIX.",
+  "The only input is a fixed help-topic code selected by SAGA. You do not receive the teacher's message, identity, school, class identifier, class metadata, or academic records.",
+  "Answer only how to use SAGA. Do not generate lesson outlines, study guides, practice questions, or subject tutoring.",
+  "Use these SAGA feature notes as the source of truth:",
+  "class-navigation: Teachers use My classes in the top navigation to open a class workspace. The Virtual Assistant is launched from an already-open class and is limited to that class. To change context, return to My classes and open another class.",
+  "class-roster: In the class workspace, Class roster contains Add students, roster import/template, editing and removal. Student number is used to match an existing student portal account. The teacher must review the roster before saving.",
+  "grading-setup: Grading setup lets a teacher choose Lecture/Laboratory or combined Lecture and Laboratory structure, configure category allocations, save the grading path, and set final-grade equivalents. Weight allocations should be checked against their parent totals before saving.",
+  "assessments: Assessment items lets a teacher add an item, choose its grading category, set maximum points, optionally set a due date and weight, and save assessment setup.",
+  "score-entry: Record scores is the score-entry workspace. The teacher enters points for selected assessment columns. Blank cells remain unchanged; the interface provides remark controls for excused, absent, and did-not-submit cases. CSV imports must be reviewed and validated before saving.",
+  "attendance: Attendance is managed from the class workspace. Teachers can add a session, select date and delivery type, and record Present, Absent, or Excused marks. Attendance is represented separately from ordinary point-based assessments.",
+  "class-activities: Activities is where class activities and learning tasks are created and managed. Teachers review activity status and due dates. Student submissions and grading stay inside SAGA.",
+  "final-grades: Final grades & submit is where the teacher reviews the grade sheet and validation messages before submission. Submitted grade sheets follow the school's verification workflow; verified sheets are final. Follow on-screen instructions for recall or correction.",
+  "grade-visibility: The class summary displays Visible to students or Hidden from students and provides grade-visibility controls. The teacher should confirm the current class before changing the setting.",
+  "profile-security: The account menu opens Profile/Account settings. Teachers can review profile information and account-security settings. Never request passwords or one-time verification codes.",
+  "class-chats: Class chats is available from the top navigation. Class-specific Google Chat controls appear from the class roster workspace when the integration is configured.",
+  "privacy: SAGA is the system of record. Workspace answers are generated inside SAGA. For general help, only the fixed topic code is sent to COGNIX; the teacher's typed message and academic records are not. Do not request personal or confidential information.",
+  "Write a clear, practical response in 3 to 6 numbered steps. Use the feature names above exactly. Do not invent buttons, paths, permissions, or statuses that are not in the feature notes.",
+  "Never claim that you opened SAGA, queried a class, viewed a student, changed a setting, saved data, or performed an action. You are read-only guidance only.",
+  "Never ask for student names, IDs, grades, scores, attendance marks, rosters, personal details, or confidential records. Direct the teacher to the relevant SAGA page for authorized student-level records.",
 ].join(" ");
 
 function apiError(
@@ -92,27 +101,16 @@ function apiError(
   }, { status, headers: RESPONSE_HEADERS });
 }
 
-function containsPersonalOrRecordData(topic: string) {
-  return (
-    /[\w.+-]+@[\w.-]+\.[A-Za-z]{2,}/i.test(topic) ||
-    /(?:\+?63[\s-]?9\d{2}[\s-]?\d{3}[\s-]?\d{4}|09\d{9})\b/.test(topic) ||
-    /\b\d{7,}\b/.test(topic) ||
-    /\b(?:student|learner|teacher|parent|guardian)\s+(?:name|id|number|email|phone|address|grade|score|attendance|record|roster)\b/i.test(topic) ||
-    /\b(?:lrn|student\s*id|contact\s*(?:number|details)|email\s*address)\s*[:=#]/i.test(topic) ||
-    /\b(?:grade|score|attendance|remark|record|roster)\s+(?:of|for)\s+[\p{L}][\p{L}\s'-]{1,40}/iu.test(topic)
-  );
-}
-
 export async function POST(request: Request) {
   const contentLength = Number(request.headers.get("content-length") ?? "0");
-  if (Number.isFinite(contentLength) && contentLength > 16_384) {
+  if (Number.isFinite(contentLength) && contentLength > 8_192) {
     return apiError(413, "payload_too_large", "Request body exceeds the allowed size.");
   }
 
   let body: unknown;
   try {
     const raw = await request.text();
-    if (raw.length > 16_384) {
+    if (raw.length > 8_192) {
       return apiError(413, "payload_too_large", "Request body exceeds the allowed size.");
     }
     body = JSON.parse(raw);
@@ -157,40 +155,26 @@ export async function POST(request: Request) {
     );
   }
 
-  if (normalized.app === "saga" && normalized.task === "learning-resource") {
-    const parsed = LearningResourceSchema.safeParse(normalized.input);
+  if (normalized.app === "saga" && normalized.task === "system-help") {
+    const parsed = SystemHelpSchema.safeParse(normalized.input);
     if (!parsed.success) {
-      return apiError(400, "invalid_input", "Provide a supported resource type, subject, learning level, and generic topic.", normalized);
-    }
-
-    const classContextText = [
-      parsed.data.subject,
-      parsed.data.classContext.subjectCode,
-      parsed.data.classContext.courseYear,
-      parsed.data.classContext.term,
-    ].join(" ");
-    if (containsPersonalOrRecordData(parsed.data.topic) || containsPersonalOrRecordData(classContextText)) {
-      return apiError(
-        400,
-        "personal_data_not_allowed",
-        "Use a generic academic topic and non-personal class subject details only. Personal details, identifiers, grades, scores, attendance, and student or teacher records are not accepted.",
-        normalized,
-      );
+      return apiError(400, "invalid_input", "Provide one supported SAGA help-topic code.", normalized);
     }
 
     const start = Date.now();
     try {
       const result = await generateModelText({
-        model: "vmc/academic-assistant",
-        system: ACADEMIC_SYSTEM_PROMPT,
-        prompt: JSON.stringify(parsed.data),
-        maxOutputTokens: 800,
+        model: "vmc/saga-system-help",
+        system: SYSTEM_HELP_PROMPT,
+        prompt: JSON.stringify({ topic: parsed.data.topic }),
+        maxOutputTokens: 650,
       });
 
-      console.info("COGNIX academic agent completed", {
+      console.info("COGNIX SAGA system help completed", {
         app: normalized.app,
         task: normalized.task,
         requestId: normalized.requestId,
+        topic: parsed.data.topic,
         durationMs: Date.now() - start,
         inputTokens: result.usage?.inputTokens ?? null,
         outputTokens: result.usage?.outputTokens ?? null,
@@ -204,24 +188,23 @@ export async function POST(request: Request) {
         requestId: normalized.requestId,
         answer: result.text,
         warnings: [
-          "AI-generated draft: a teacher must review accuracy, age-appropriateness, and curriculum fit before classroom use.",
-          "Only the selected class subject metadata, learning level, resource settings, and generic topic are sent to the model provider. SAGA does not send class lists or student academic records. AI Gateway filters out providers that train on prompts; this does not guarantee zero data retention.",
+          "This is general SAGA product guidance only. COGNIX received a fixed help-topic code; no teacher message, class context, or academic records were provided.",
         ],
         usage: result.usage ?? null,
       }, { headers: RESPONSE_HEADERS });
     } catch (error) {
       if (error instanceof ModelNotConfiguredError) {
-        return apiError(503, "not_configured", "The COGNIX academic model is not configured. No application records were accessed.", normalized);
+        return apiError(503, "not_configured", "The SAGA system-help model is not configured. No application records were accessed.", normalized);
       }
       const gatewayStatus = error instanceof ModelGatewayError ? error.status : null;
-      console.error("COGNIX academic agent failed", {
+      console.error("COGNIX SAGA system help failed", {
         app: normalized.app,
         task: normalized.task,
         requestId: normalized.requestId,
         gatewayStatus,
         failureType: error instanceof ModelGatewayError ? "gateway" : "internal",
       });
-      return apiError(502, "model_unavailable", "The academic draft could not be generated. No SAGA records were accessed or changed.", normalized, { gatewayStatus });
+      return apiError(502, "model_unavailable", "SAGA system guidance could not be generated. No application records were accessed or changed.", normalized, { gatewayStatus });
     }
   }
 
