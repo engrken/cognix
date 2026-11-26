@@ -54,7 +54,7 @@ const advisorInputSchema = z.object({
 
 export type AiAdvisorInput = z.infer<typeof advisorInputSchema>;
 
-const unsafeAdvicePattern = /https?:\/\/|\x60|\x60\x60\x60|(?:^|\\s)(?:sudo|kubectl|curl|wget|bash|sh|rm|chmod|chown|psql|mysql|redis-cli|vercel|npm|npx|pnpm|yarn)\\s+|(?:^|\\s)(?:DROP|TRUNCATE|ALTER|INSERT|DELETE|SELECT)\\s+(?:TABLE|FROM|INTO|DATABASE|USER|\\*)/i;
+const unsafeAdvicePattern = /https?:\/\/|\x60|\x60\x60\x60|(?:^|\s)(?:sudo|kubectl|curl|wget|bash|sh|rm|chmod|chown|psql|mysql|redis-cli|vercel|npm|npx|pnpm|yarn)\s+|(?:^|\s)(?:DROP|TRUNCATE|ALTER|INSERT|DELETE|SELECT)\s+(?:TABLE|FROM|INTO|DATABASE|USER|\*)/i;
 const adviceText = (max: number) => z.string().min(1).max(max)
   .refine((value) => !unsafeAdvicePattern.test(value), "Unsafe operational instructions are not accepted");
 
