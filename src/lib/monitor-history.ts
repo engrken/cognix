@@ -88,6 +88,14 @@ async function readDocument(options: { includeWriteEtag?: boolean } = {}): Promi
   };
 }
 
+export async function getMonitorSnapshots(): Promise<MonitorSnapshot[]> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return [];
+  const { document } = await readDocument();
+  return [...document.snapshots].sort(
+    (a, b) => Date.parse(a.checkedAt) - Date.parse(b.checkedAt),
+  );
+}
+
 function isSnapshot(value: unknown): value is MonitorSnapshot {
   if (!value || typeof value !== "object") return false;
   const snapshot = value as Partial<MonitorSnapshot>;
