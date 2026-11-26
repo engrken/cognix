@@ -1,5 +1,5 @@
 import { BlobNotFoundError, get, head, put } from "@vercel/blob";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash } from "node:crypto";
 import { getMonitorSnapshots, type MonitorSnapshot } from "@/lib/monitor-history";
 
 export type LearningPattern = {
@@ -35,7 +35,7 @@ const ALLOWED_APPS = new Set(["cognix", "saga", "clear", "roamph"]);
 
 function normalizeNote(value: unknown): string {
   if (typeof value !== "string") return "";
-  return value.replace(/[\\u0000-\\u001f\\u007f]/g, " ").replace(/\\s+/g, " ").trim().slice(0, MAX_NOTE_LENGTH);
+  return value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_NOTE_LENGTH);
 }
 
 function isLearning(value: unknown): value is VerifiedLearningEntry {
