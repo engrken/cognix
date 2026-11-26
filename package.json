@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:advisor": "node --experimental-strip-types --test tests/ai-resolution-advisor.test.mjs"
   },
   "dependencies": {
     "@vercel/blob": "^2.9.0",

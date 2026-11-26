@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Typecheck, lint, and production build
+    name: Typecheck, tests, lint, and production build
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -34,6 +34,9 @@ jobs:
 
       - name: TypeScript
         run: npm run typecheck
+
+      - name: AI advisor synthetic tests
+        run: npm run test:advisor
 
       - name: ESLint
         run: npm run lint
