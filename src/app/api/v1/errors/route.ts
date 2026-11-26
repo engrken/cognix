@@ -38,7 +38,7 @@ export async function POST(request: Request) {
       apiVersion: "1",
       status: result.duplicate ? "duplicate" : "accepted",
       eventRef: result.eventRef,
-      classification: "new_pattern",
+      classification: "awaiting_analysis",
     }, { status: result.duplicate ? 200 : 202, headers });
   } catch (error) {
     if (error instanceof Error && error.message === "rate_limited") {
