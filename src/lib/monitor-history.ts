@@ -74,7 +74,17 @@ async function readDocument(options: { includeWriteEtag?: boolean } = {}): Promi
     }
   }
 
-  const result = await get(HISTORY_PATH, { access: "private", useCache: false });
+  let result;
+  try {
+    result = await get(HISTORY_PATH, { access: "private", useCache: false });
+  } catch (error) {
+    // A missing history object is the expected empty state on first use.
+    // Keep non-not-found failures visible so genuine storage issues are not hidden.
+    if (error instanceof BlobNotFoundError) {
+      return { document: { version: 1, snapshots: [] }, etag };
+    }
+    throw error;
+  }
   if (!result || result.statusCode !== 200 || !result.stream) {
     return { document: { version: 1, snapshots: [] }, etag };
   }
@@ -86,6 +96,21 @@ async function readDocument(options: { includeWriteEtag?: boolean } = {}): Promi
     document: { version: 1, snapshots: snapshots.filter(isSnapshot).slice(-MAX_SNAPSHOTS) },
     etag,
   };
+}
+
+export async function getMonitorSnapshots(): Promise<MonitorSnapshot[]> {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) return [];
+  try {
+    const { document } = await readDocument();
+    return [...document.snapshots].sort(
+      (a, b) => Date.parse(a.checkedAt) - Date.parse(b.checkedAt),
+    );
+  } catch (error) {
+    // An empty history is a valid first-run state for the learning layer.
+    // Preserve all other storage and parsing errors for operational visibility.
+    if (error instanceof BlobNotFoundError) return [];
+    throw error;
+  }
 }
 
 function isSnapshot(value: unknown): value is MonitorSnapshot {
