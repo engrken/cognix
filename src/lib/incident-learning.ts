@@ -41,14 +41,22 @@ function normalizeNote(value: unknown): string {
 function isLearning(value: unknown): value is VerifiedLearningEntry {
   if (!value || typeof value !== "object") return false;
   const item = value as Partial<VerifiedLearningEntry>;
+  const learning = item.learning as Partial<VerifiedLearning> | undefined;
   return typeof item.fingerprint === "string"
     && /^[a-f0-9]{64}$/.test(item.fingerprint)
     && typeof item.applicationId === "string"
     && ALLOWED_APPS.has(item.applicationId)
-    && Boolean(item.learning)
-    && typeof item.learning?.confirmedCause === "string"
-    && typeof item.learning?.resolution === "string"
-    && item.learning?.verification === "verified";
+    && Boolean(learning)
+    && typeof learning?.confirmedCause === "string"
+    && learning.confirmedCause.length > 0
+    && learning.confirmedCause.length <= MAX_NOTE_LENGTH
+    && typeof learning.resolution === "string"
+    && learning.resolution.length > 0
+    && learning.resolution.length <= MAX_NOTE_LENGTH
+    && typeof learning.verifiedAt === "string"
+    && Number.isFinite(Date.parse(learning.verifiedAt))
+    && learning.reviewedBy === "authenticated-admin"
+    && learning.verification === "verified";
 }
 
 async function readKnowledge(includeEtag = false): Promise<{ document: LearningDocument; etag: string | null }> {
@@ -118,12 +126,15 @@ export async function getLearningPatterns(): Promise<{ available: boolean; patte
     }
   }
 
-  const saved = new Map(knowledge.document.entries.map((entry) => [entry.fingerprint, entry.learning]));
+  const saved = new Map(knowledge.document.entries.map((entry) => [
+    `${entry.applicationId}:${entry.fingerprint}`,
+    entry.learning,
+  ]));
   const patterns = [...groups.entries()].map(([fingerprint, group]) => ({
     fingerprint,
     ...group,
     averageLatencyMs: group.latencySamples ? Math.round(group.latencyTotal / group.latencySamples) : null,
-    verifiedLearning: saved.get(fingerprint) ?? null,
+    verifiedLearning: saved.get(`${group.applicationId}:${fingerprint}`) ?? null,
   })).sort((a, b) => Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt));
 
   return { available: true, patterns };
