@@ -35,22 +35,74 @@ const EventSchema = z.object({
 }).strict();
 
 type EventInput = z.infer<typeof EventSchema>;
-type StoredEvent = {
-  eventRef: string;
-  eventId: string;
-  app: CognixApplication;
-  category: EventInput["category"];
-  severity: EventInput["severity"];
-  component: string;
-  operationCode: string | null;
-  httpStatusClass: string;
-  dependencyCode: string | null;
-  environment: EventInput["environment"];
-  fingerprint: string;
-  occurredAt: string;
-  receivedAt: string;
-};
-type EventDocument = { version: 1; events: StoredEvent[] };
+const StoredEventSchema = z.object({
+  eventRef: z.string().regex(/^err_[a-f0-9]{24}$/),
+  eventId: z.string().uuid(),
+  app: z.enum(["saga", "clear", "roamph"]),
+  category: EventSchema.shape.category,
+  severity: EventSchema.shape.severity,
+  component: EventSchema.shape.component,
+  operationCode: EventSchema.shape.operationCode.nullable(),
+  httpStatusClass: z.enum(["4xx", "5xx", "none"]),
+  dependencyCode: EventSchema.shape.dependencyCode.nullable(),
+  environment: EventSchema.shape.environment,
+  fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+  occurredAt: z.string().datetime({ offset: true }),
+  receivedAt: z.string().datetime({ offset: true }),
+}).strict();
+const EventDocumentSchema = z.object({
+  version: z.literal(1),
+  events: z.array(StoredEventSchema).max(MAX_EVENTS),
+}).strict();
+type StoredEvent = z.infer<typeof StoredEventSchema>;
+type EventDocument = z.infer<typeof EventDocumentSchema>;
+const MAX_STORE_BYTES = 1_048_576;
+
+export function parseStoredEventDocument(raw: string, now = Date.now()): EventDocument {
+  if (new TextEncoder().encode(raw).byteLength > MAX_STORE_BYTES) {
+    throw new Error("event_store_too_large");
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    throw new Error("event_store_corrupt");
+  }
+  const parsed = EventDocumentSchema.safeParse(value);
+  if (!parsed.success) throw new Error("event_store_corrupt");
+  const cutoff = now - RETENTION_MS;
+  return {
+    version: 1,
+    events: parsed.data.events.filter((event) => Date.parse(event.receivedAt) >= cutoff),
+  };
+}
+
+async function readBoundedText(stream: ReadableStream<Uint8Array>) {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      size += value.byteLength;
+      if (size > MAX_STORE_BYTES) {
+        await reader.cancel();
+        throw new Error("event_store_too_large");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+}
 
 function fingerprintFor(event: EventInput) {
   const statusClass = event.httpStatus ? `${Math.floor(event.httpStatus / 100)}xx` : "none";
@@ -72,21 +124,8 @@ async function readStore(includeEtag: boolean) {
     if (!result || result.statusCode !== 200 || !result.stream) {
       return { document: { version: 1 as const, events: [] }, etag };
     }
-    const parsed = JSON.parse(await new Response(result.stream).text()) as Partial<EventDocument>;
-    const cutoff = Date.now() - RETENTION_MS;
-    const events = Array.isArray(parsed.events)
-      ? parsed.events.filter((item): item is StoredEvent =>
-          Boolean(item && typeof item === "object"
-            && typeof item.eventId === "string"
-            && typeof item.app === "string"
-            && typeof item.receivedAt === "string"
-            && Number.isFinite(Date.parse(item.receivedAt))
-            && Date.parse(item.receivedAt) >= cutoff
-            && typeof item.fingerprint === "string"
-            && /^[a-f0-9]{64}$/.test(item.fingerprint))
-        ).slice(-MAX_EVENTS)
-      : [];
-    return { document: { version: 1 as const, events }, etag };
+    const document = parseStoredEventDocument(await readBoundedText(result.stream));
+    return { document, etag };
   } catch (error) {
     if (error instanceof BlobNotFoundError) return { document: { version: 1 as const, events: [] }, etag };
     throw error;

@@ -84,3 +84,61 @@ test("rejects invalid enum values and malformed event identifiers", async () => 
     { error: "invalid_event" },
   );
 });
+
+
+const storedRecord = (overrides = {}) => ({
+  eventRef: "err_0123456789abcdef01234567",
+  eventId: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  app: "saga",
+  category: "database_unavailable",
+  severity: "critical",
+  component: "database",
+  operationCode: "read",
+  httpStatusClass: "5xx",
+  dependencyCode: "primary_database",
+  environment: "production",
+  fingerprint: "a".repeat(64),
+  occurredAt: new Date().toISOString(),
+  receivedAt: new Date().toISOString(),
+  ...overrides,
+});
+
+test("validates persisted event documents strictly", async () => {
+  const { parseStoredEventDocument } = await import("../src/lib/error-intelligence.ts");
+  const parsed = parseStoredEventDocument(JSON.stringify({ version: 1, events: [storedRecord()] }));
+  assert.equal(parsed.events.length, 1);
+  assert.equal(parsed.events[0].app, "saga");
+});
+
+test("rejects a persisted document with an invalid record instead of silently dropping it", async () => {
+  const { parseStoredEventDocument } = await import("../src/lib/error-intelligence.ts");
+  assert.throws(
+    () => parseStoredEventDocument(JSON.stringify({
+      version: 1,
+      events: [storedRecord(), storedRecord({ app: "untrusted-app" })],
+    })),
+    /event_store_corrupt/,
+  );
+});
+
+test("rejects unknown persisted fields and invalid document versions", async () => {
+  const { parseStoredEventDocument } = await import("../src/lib/error-intelligence.ts");
+  assert.throws(
+    () => parseStoredEventDocument(JSON.stringify({
+      version: 1, events: [storedRecord({ stack: "must never persist" })],
+    })),
+    /event_store_corrupt/,
+  );
+  assert.throws(
+    () => parseStoredEventDocument(JSON.stringify({ version: 2, events: [] })),
+    /event_store_corrupt/,
+  );
+});
+
+test("enforces a bounded persisted document size", async () => {
+  const { parseStoredEventDocument } = await import("../src/lib/error-intelligence.ts");
+  assert.throws(
+    () => parseStoredEventDocument(JSON.stringify({ version: 1, events: [], padding: "x".repeat(1_048_576) })),
+    /event_store_too_large/,
+  );
+});
