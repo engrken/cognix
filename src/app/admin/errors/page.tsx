@@ -45,9 +45,9 @@ export default async function ErrorIntelligencePage() {
         : incidents.length === 0 ? <section style={{ padding: 20, border: "1px solid #26364e", borderRadius: 12, background: "#111b2c" }}><h2>No application error events received</h2><p style={{ color: "#aab8ce" }}>The receiver is ready, but no SAGA, CLEAR Sys, or ROAMPH adapter is currently delivering technical events.</p></section>
         : <section style={{ display: "grid", gap: 14 }}>
           <p style={{ color: "#8fa4c0", fontSize: 13 }}>Showing {incidents.length} grouped patterns from up to 100 recent events. Retention is limited to 30 days and 1,000 records.</p>
-          {incidents.map(({ diagnosis, plan }) => <article key={diagnosis.fingerprint} style={{ padding: 18, border: "1px solid #26364e", borderRadius: 12, background: "#111b2c" }}>
+          {incidents.map(({ diagnosis, plan }) => <article key={`${diagnosis.fingerprint}:${diagnosis.environment}`} style={{ padding: 18, border: "1px solid #26364e", borderRadius: 12, background: "#111b2c" }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-              <strong style={{ textTransform: "uppercase" }}>{diagnosis.app} · {diagnosis.category.replaceAll("_", " ")}</strong>
+              <strong style={{ textTransform: "uppercase" }}>{diagnosis.app} · {diagnosis.environment} · {diagnosis.category.replaceAll("_", " ")}</strong>
               <span style={{ color: diagnosis.severity === "critical" ? "#ff8585" : diagnosis.severity === "error" ? "#f4c66a" : "#8fc5ff", fontSize: 12, fontWeight: 700 }}>{diagnosis.severity.toUpperCase()}</span>
             </div>
             <h2 style={{ margin: "12px 0 6px", fontSize: 19 }}>{diagnosis.hypothesis}</h2>
