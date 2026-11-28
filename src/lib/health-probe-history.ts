@@ -44,7 +44,11 @@ export function summarizeDatabaseProbeLatency(
     if (!Number.isFinite(timestamp)) continue;
 
     for (const service of snapshot.services) {
-      if (!isValidLatency(service.databaseLatencyMs)) continue;
+      if (
+        typeof service.id !== "string" || service.id.length === 0 || service.id.length > 64
+        || typeof service.name !== "string" || service.name.length === 0 || service.name.length > 120
+        || !isValidLatency(service.databaseLatencyMs)
+      ) continue;
 
       const current = samples.get(service.id);
       if (!current) {
