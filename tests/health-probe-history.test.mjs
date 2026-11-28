@@ -75,6 +75,32 @@ test("ignores missing, malformed, negative, fractional, and out-of-range samples
   assert.deepEqual(result, []);
 });
 
+test("skips malformed service metadata in persisted snapshots", () => {
+  const result = summarizeDatabaseProbeLatency([
+    {
+      checkedAt: "2026-11-28T01:00:00.000Z",
+      services: [
+        { id: null, name: "Missing ID", databaseLatencyMs: 50 },
+        { id: "clear", name: null, databaseLatencyMs: 50 },
+        { id: "", name: "Empty ID", databaseLatencyMs: 50 },
+        { id: "clear", name: "CLEAR Sys", databaseLatencyMs: 50 },
+      ],
+    },
+  ]);
+
+  assert.deepEqual(result, [
+    {
+      id: "clear",
+      name: "CLEAR Sys",
+      sampleCount: 1,
+      latestAt: "2026-11-28T01:00:00.000Z",
+      latestLatencyMs: 50,
+      averageLatencyMs: 50,
+      peakLatencyMs: 50,
+    },
+  ]);
+});
+
 test("finds latest sample correctly even when snapshots arrive out of order", () => {
   const result = summarizeDatabaseProbeLatency([
     {
