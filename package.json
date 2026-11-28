@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test:receiver": "node --experimental-strip-types --test tests/error-intelligence.test.mjs",
+    "test:receiver": "node --experimental-strip-types --test tests/auth.test.mjs tests/error-intelligence.test.mjs",
     "test:advisor": "node --experimental-strip-types --test tests/ai-resolution-advisor.test.mjs",
     "test:planner": "node --experimental-strip-types --test tests/remediation-planner.test.mjs",
     "test:diagnosis": "node --experimental-strip-types --test tests/incident-diagnosis.test.mjs",
