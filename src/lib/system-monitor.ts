@@ -1,5 +1,6 @@
 import { getMonitorHistory, recordMonitorSnapshot, type MonitorHistory } from "@/lib/monitor-history";
 import { readHealthResponse } from "@/lib/health-payload";
+import { getHealthCheckTimeoutMs } from "@/lib/monitor-timeouts";
 
 export type MonitorResult = {
   id: string;
@@ -19,16 +20,15 @@ const TARGETS = [
   { id: "roamph", name: "ROAMPH", url: "https://roamph.vercel.app/api/health", endpoint: "/api/health" },
 ] as const;
 
-const CHECK_TIMEOUT_MS = 5_000;
-
 async function checkTarget(target: (typeof TARGETS)[number]): Promise<MonitorResult> {
   const startedAt = Date.now();
+  const timeoutMs = getHealthCheckTimeoutMs(target.id);
   try {
     const response = await fetch(target.url, {
       method: "GET",
       cache: "no-store",
       redirect: "manual",
-      signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: { "User-Agent": "COGNIX-System-Monitor/1.0" },
     });
     const latencyMs = Date.now() - startedAt;
