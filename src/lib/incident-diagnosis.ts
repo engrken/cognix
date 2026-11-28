@@ -6,12 +6,14 @@ export type DiagnosticEvent = {
   component: string;
   dependencyCode: string | null;
   httpStatusClass: string;
+  environment: "production" | "staging";
   occurredAt: string;
 };
 
 export type IncidentDiagnosis = {
   fingerprint: string;
   app: DiagnosticEvent["app"];
+  environment: DiagnosticEvent["environment"];
   category: DiagnosticEvent["category"];
   component: string;
   severity: DiagnosticEvent["severity"];
@@ -31,6 +33,12 @@ type DiagnosticRule = {
   rationale: string;
   checks: string[];
   specific: boolean;
+};
+
+const SEVERITY_RANK: Record<DiagnosticEvent["severity"], number> = {
+  critical: 3,
+  error: 2,
+  warning: 1,
 };
 
 const RULES: DiagnosticRule[] = [
@@ -95,23 +103,31 @@ const RULES: DiagnosticRule[] = [
 export function diagnoseErrorEvents(events: readonly DiagnosticEvent[]): IncidentDiagnosis[] {
   const groups = new Map<string, DiagnosticEvent[]>();
   for (const event of events) {
-    const current = groups.get(event.fingerprint) ?? [];
+    // The same technical fingerprint in staging and production represents
+    // separate operational incidents and must never be combined.
+    const groupKey = `${event.fingerprint}:${event.environment}`;
+    const current = groups.get(groupKey) ?? [];
     current.push(event);
-    groups.set(event.fingerprint, current);
+    groups.set(groupKey, current);
   }
 
-  return [...groups.entries()]
-    .map(([fingerprint, group]) => {
+  return [...groups.values()]
+    .map((group) => {
       const ordered = [...group].sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
       const representative = ordered[ordered.length - 1];
       const rule = RULES.find((candidate) => candidate.matches(representative)) ?? RULES[RULES.length - 1];
       const occurrences = group.length;
+      const severity = group.reduce(
+        (highest, event) => SEVERITY_RANK[event.severity] > SEVERITY_RANK[highest] ? event.severity : highest,
+        "warning" as DiagnosticEvent["severity"],
+      );
       return {
-        fingerprint,
+        fingerprint: representative.fingerprint,
         app: representative.app,
+        environment: representative.environment,
         category: representative.category,
         component: representative.component,
-        severity: representative.severity,
+        severity,
         occurrences,
         firstSeenAt: ordered[0].occurredAt,
         lastSeenAt: representative.occurredAt,
@@ -123,8 +139,7 @@ export function diagnoseErrorEvents(events: readonly DiagnosticEvent[]): Inciden
       };
     })
     .sort((a, b) => {
-      const severityRank = { critical: 3, error: 2, warning: 1 };
-      return severityRank[b.severity] - severityRank[a.severity]
+      return SEVERITY_RANK[b.severity] - SEVERITY_RANK[a.severity]
         || b.occurrences - a.occurrences
         || Date.parse(b.lastSeenAt) - Date.parse(a.lastSeenAt);
     })
