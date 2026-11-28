@@ -102,6 +102,7 @@ export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashb
     periodStart: null,
     periodEnd: null,
     availability: [],
+    databaseProbeLatency: [],
     incidents: [],
   };
   let historyWriteSucceeded = false;
