@@ -38,8 +38,8 @@ jobs:
       - name: ESLint
         run: npm run lint
 
-      - name: Health response diagnostics regression tests
-        run: node --experimental-strip-types --test tests/health-payload.test.mjs
+      - name: Health response and history diagnostics regression tests
+        run: node --experimental-strip-types --test tests/health-payload.test.mjs tests/health-probe-history.test.mjs
 
       - name: Next.js production build
         run: npm run build
