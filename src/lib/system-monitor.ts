@@ -1,4 +1,6 @@
 import { getMonitorHistory, recordMonitorSnapshot, type MonitorHistory } from "@/lib/monitor-history";
+import { readHealthResponse } from "@/lib/health-payload";
+import { getHealthCheckTimeoutMs } from "@/lib/monitor-timeouts";
 
 export type MonitorResult = {
   id: string;
@@ -7,6 +9,7 @@ export type MonitorResult = {
   status: "healthy" | "degraded" | "unhealthy";
   httpStatus: number | null;
   latencyMs: number | null;
+  databaseLatencyMs: number | null;
   detail: string;
 };
 
@@ -17,28 +20,29 @@ const TARGETS = [
   { id: "roamph", name: "ROAMPH", url: "https://roamph.vercel.app/api/health", endpoint: "/api/health" },
 ] as const;
 
-const CHECK_TIMEOUT_MS = 5_000;
-
 async function checkTarget(target: (typeof TARGETS)[number]): Promise<MonitorResult> {
   const startedAt = Date.now();
+  const timeoutMs = getHealthCheckTimeoutMs(target.id);
   try {
     const response = await fetch(target.url, {
       method: "GET",
       cache: "no-store",
       redirect: "manual",
-      signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
       headers: { "User-Agent": "COGNIX-System-Monitor/1.0" },
     });
     const latencyMs = Date.now() - startedAt;
+    // Read the response body once regardless of HTTP status. CLEAR's 503
+    // health payload can still provide the safe database probe duration.
+    const { isJson, payload, databaseLatencyMs } = await readHealthResponse(response);
+
     if (response.status >= 200 && response.status < 300) {
-      const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-      if (!contentType.includes("application/json")) {
-        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "Health endpoint returned an unexpected response format." };
+      if (!isJson) {
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, databaseLatencyMs, detail: "Health endpoint returned an unexpected response format." };
       }
 
-      const payload = await response.json().catch(() => null) as Record<string, unknown> | null;
-      if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "Health endpoint returned an invalid readiness response." };
+      if (!payload) {
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, databaseLatencyMs, detail: "Health endpoint returned an invalid readiness response." };
       }
 
       const declaredStatus = typeof payload.status === "string" ? payload.status.toLowerCase() : null;
@@ -46,32 +50,32 @@ async function checkTarget(target: (typeof TARGETS)[number]): Promise<MonitorRes
       const acceptedStatuses = target.id === "cognix" ? ["ok", "healthy", "foundation"] : ["ok", "healthy"];
 
       if (declaredStatus === "unhealthy" || databaseStatus === "unavailable") {
-        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: response.status, latencyMs, detail: "The application reports an unavailable dependency." };
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: response.status, latencyMs, databaseLatencyMs, detail: "The application reports an unavailable dependency." };
       }
       if (declaredStatus === "degraded") {
-        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "The application reports degraded readiness." };
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, databaseLatencyMs, detail: "The application reports degraded readiness." };
       }
       if (!declaredStatus || !acceptedStatuses.includes(declaredStatus)) {
-        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "Health endpoint returned an unrecognized readiness status." };
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, databaseLatencyMs, detail: "Health endpoint returned an unrecognized readiness status." };
       }
       if (target.id !== "cognix" && !databaseStatus) {
-        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "The application did not report its database readiness." };
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, databaseLatencyMs, detail: "The application did not report its database readiness." };
       }
       if (databaseStatus && !["ok", "healthy", "reachable"].includes(databaseStatus)) {
-        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: response.status, latencyMs, detail: "The application database readiness check did not pass." };
+        return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: response.status, latencyMs, databaseLatencyMs, detail: "The application database readiness check did not pass." };
       }
 
       const detail = databaseStatus
         ? "Application and database connectivity checks passed."
         : "Application readiness endpoint responded successfully.";
-      return { id: target.id, name: target.name, endpoint: target.endpoint, status: "healthy", httpStatus: response.status, latencyMs, detail };
+      return { id: target.id, name: target.name, endpoint: target.endpoint, status: "healthy", httpStatus: response.status, latencyMs, databaseLatencyMs, detail };
     }
     if (response.status >= 300 && response.status < 400) {
-      return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, detail: "Health endpoint redirected; availability needs review." };
+      return { id: target.id, name: target.name, endpoint: target.endpoint, status: "degraded", httpStatus: response.status, latencyMs, databaseLatencyMs, detail: "Health endpoint redirected; availability needs review." };
     }
-    return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: response.status, latencyMs, detail: "Endpoint returned an unsuccessful HTTP status." };
+    return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: response.status, latencyMs, databaseLatencyMs, detail: "Endpoint returned an unsuccessful HTTP status." };
   } catch {
-    return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: null, latencyMs: Date.now() - startedAt, detail: "Endpoint could not be reached before the timeout." };
+    return { id: target.id, name: target.name, endpoint: target.endpoint, status: "unhealthy", httpStatus: null, latencyMs: Date.now() - startedAt, databaseLatencyMs: null, detail: "Endpoint could not be reached before the timeout." };
   }
 }
 
@@ -98,6 +102,7 @@ export async function getSystemStatus(source: "dashboard" | "scheduled" = "dashb
     periodStart: null,
     periodEnd: null,
     availability: [],
+    databaseProbeLatency: [],
     incidents: [],
   };
   let historyWriteSucceeded = false;

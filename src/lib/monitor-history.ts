@@ -1,5 +1,6 @@
 import { BlobNotFoundError, get, head, put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
+import { summarizeDatabaseProbeLatency, type DatabaseProbeLatencySummary } from "@/lib/health-probe-history";
 
 export type HistoryServiceStatus = "healthy" | "degraded" | "unhealthy";
 
@@ -13,6 +14,8 @@ export type MonitorSnapshot = {
     status: HistoryServiceStatus;
     httpStatus: number | null;
     latencyMs: number | null;
+    /** Optional for compatibility with snapshots written before probe timing was added. */
+    databaseLatencyMs?: number | null;
   }>;
 };
 
@@ -43,6 +46,7 @@ export type MonitorHistory = {
     totalChecks: number;
     healthyPercent: number | null;
   }>;
+  databaseProbeLatency: DatabaseProbeLatencySummary[];
   incidents: MonitorIncident[];
 };
 
@@ -57,6 +61,7 @@ function emptyHistory(available = true): MonitorHistory {
     periodStart: null,
     periodEnd: null,
     availability: [],
+    databaseProbeLatency: [],
     incidents: [],
   };
 }
@@ -131,6 +136,7 @@ export async function recordMonitorSnapshot(
       status: HistoryServiceStatus;
       httpStatus: number | null;
       latencyMs: number | null;
+      databaseLatencyMs?: number | null;
     }>;
   },
   source: "dashboard" | "scheduled",
@@ -143,12 +149,13 @@ export async function recordMonitorSnapshot(
     id: randomUUID(),
     checkedAt: status.checkedAt,
     source,
-    services: status.services.map(({ id, name, status: serviceStatus, httpStatus, latencyMs }) => ({
+    services: status.services.map(({ id, name, status: serviceStatus, httpStatus, latencyMs, databaseLatencyMs }) => ({
       id,
       name,
       status: serviceStatus,
       httpStatus,
       latencyMs,
+      databaseLatencyMs: databaseLatencyMs ?? null,
     })),
   };
 
@@ -253,6 +260,7 @@ export async function getMonitorHistory(): Promise<MonitorHistory> {
       totalChecks: stats.total,
       healthyPercent: stats.total ? Math.round((stats.healthy / stats.total) * 1000) / 10 : null,
     })),
+    databaseProbeLatency: summarizeDatabaseProbeLatency(snapshots),
     incidents: incidents.slice(0, 20),
   };
 }

@@ -4,6 +4,7 @@ import { getSystemStatus } from "@/lib/system-monitor";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export async function GET(request: NextRequest) {
   if (!verifyAdminSession(request.cookies.get(ADMIN_COOKIE)?.value)) {

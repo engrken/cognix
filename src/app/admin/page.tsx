@@ -7,6 +7,7 @@ import AgentRegistry from "./agent-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const palette = {
   healthy: { color: "#74dfb0", label: "Healthy" },
@@ -86,11 +87,39 @@ export default async function AdminPage({
                   <h3 style={{ margin: 0, fontSize: 19 }}>{service.name}</h3>
                   <span style={{ color: style.color, fontSize: 12, fontWeight: 700 }}>{style.label}</span>
                 </div>
-                <p style={{ color: "#8fa4c0", fontSize: 12 }}>{service.endpoint} · HTTP {service.httpStatus ?? "—"} · {service.latencyMs ?? "—"} ms</p>
+                <p style={{ color: "#8fa4c0", fontSize: 12 }}>
+                  {service.endpoint} · HTTP {service.httpStatus ?? "—"} · {service.latencyMs ?? "—"} ms
+                  {service.databaseLatencyMs !== null ? ` · DB probe ${service.databaseLatencyMs} ms` : ""}
+                </p>
                 <p style={{ color: "#b9c7da", fontSize: 14, lineHeight: 1.6 }}>{service.detail}</p>
               </article>;
             })}
           </div>
+        </section>
+
+        <section style={{ marginTop: 30 }}>
+          <h2 style={{ fontSize: 20 }}>Database probe latency history</h2>
+          <p style={{ marginTop: -6, color: "#8fa4c0", fontSize: 12 }}>Aggregated from recorded health responses that include a valid database probe duration. Older records without this field are excluded.</p>
+          {!history.available ? (
+            <p style={{ color: "#f4c66a" }}>History storage is currently unavailable.</p>
+          ) : history.databaseProbeLatency.length === 0 ? (
+            <p style={{ color: "#aab8ce" }}>No timed database probe samples have been recorded yet.</p>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 12 }}>
+              {history.databaseProbeLatency.map((item) => (
+                <article key={item.id} style={{ padding: 16, borderRadius: 10, border: "1px solid #26364e", background: "#111b2c" }}>
+                  <h3 style={{ margin: "0 0 10px", fontSize: 16 }}>{item.name}</h3>
+                  <p style={{ margin: "0 0 8px", color: "#74dfb0", fontSize: 22, fontWeight: 800 }}>{item.averageLatencyMs} ms <span style={{ color: "#8fa4c0", fontSize: 11, fontWeight: 400 }}>average</span></p>
+                  <p style={{ margin: 0, color: "#b9c7da", fontSize: 12, lineHeight: 1.8 }}>
+                    Latest: {item.latestLatencyMs} ms<br />
+                    Peak: {item.peakLatencyMs} ms<br />
+                    Samples: {item.sampleCount}<br />
+                    Last sample: {new Date(item.latestAt).toLocaleString("en-PH", { timeZone: "Asia/Manila" })}
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
         </section>
 
         <section style={{ marginTop: 30 }}>
