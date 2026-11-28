@@ -7,6 +7,7 @@ import AgentRegistry from "./agent-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const palette = {
   healthy: { color: "#74dfb0", label: "Healthy" },
