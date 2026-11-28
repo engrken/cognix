@@ -13,6 +13,8 @@ export type MonitorSnapshot = {
     status: HistoryServiceStatus;
     httpStatus: number | null;
     latencyMs: number | null;
+    /** Optional for compatibility with snapshots written before probe timing was added. */
+    databaseLatencyMs?: number | null;
   }>;
 };
 
@@ -131,6 +133,7 @@ export async function recordMonitorSnapshot(
       status: HistoryServiceStatus;
       httpStatus: number | null;
       latencyMs: number | null;
+      databaseLatencyMs?: number | null;
     }>;
   },
   source: "dashboard" | "scheduled",
@@ -143,12 +146,13 @@ export async function recordMonitorSnapshot(
     id: randomUUID(),
     checkedAt: status.checkedAt,
     source,
-    services: status.services.map(({ id, name, status: serviceStatus, httpStatus, latencyMs }) => ({
+    services: status.services.map(({ id, name, status: serviceStatus, httpStatus, latencyMs, databaseLatencyMs }) => ({
       id,
       name,
       status: serviceStatus,
       httpStatus,
       latencyMs,
+      databaseLatencyMs: databaseLatencyMs ?? null,
     })),
   };
 
