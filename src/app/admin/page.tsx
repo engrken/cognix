@@ -86,7 +86,10 @@ export default async function AdminPage({
                   <h3 style={{ margin: 0, fontSize: 19 }}>{service.name}</h3>
                   <span style={{ color: style.color, fontSize: 12, fontWeight: 700 }}>{style.label}</span>
                 </div>
-                <p style={{ color: "#8fa4c0", fontSize: 12 }}>{service.endpoint} · HTTP {service.httpStatus ?? "—"} · {service.latencyMs ?? "—"} ms</p>
+                <p style={{ color: "#8fa4c0", fontSize: 12 }}>
+                  {service.endpoint} · HTTP {service.httpStatus ?? "—"} · {service.latencyMs ?? "—"} ms
+                  {service.databaseLatencyMs !== null ? ` · DB probe ${service.databaseLatencyMs} ms` : ""}
+                </p>
                 <p style={{ color: "#b9c7da", fontSize: 14, lineHeight: 1.6 }}>{service.detail}</p>
               </article>;
             })}
