@@ -1,5 +1,5 @@
 import { getMonitorHistory, recordMonitorSnapshot, type MonitorHistory } from "@/lib/monitor-history";
-import { asReadinessPayload, readDatabaseLatencyMs } from "@/lib/health-payload";
+import { readHealthResponse } from "@/lib/health-payload";
 
 export type MonitorResult = {
   id: string;
@@ -32,14 +32,9 @@ async function checkTarget(target: (typeof TARGETS)[number]): Promise<MonitorRes
       headers: { "User-Agent": "COGNIX-System-Monitor/1.0" },
     });
     const latencyMs = Date.now() - startedAt;
-    const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
-    const isJson = contentType.includes("application/json");
-    // Parse JSON for unsuccessful responses too: CLEAR's 503 body carries the
-    // safe database probe duration needed to distinguish slow wake-up from
-    // an immediate connection failure.
-    const body: unknown = isJson ? await response.json().catch(() => null) : null;
-    const payload = asReadinessPayload(body);
-    const databaseLatencyMs = readDatabaseLatencyMs(body);
+    // Read the response body once regardless of HTTP status. CLEAR's 503
+    // health payload can still provide the safe database probe duration.
+    const { isJson, payload, databaseLatencyMs } = await readHealthResponse(response);
 
     if (response.status >= 200 && response.status < 300) {
       if (!isJson) {
