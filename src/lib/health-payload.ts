@@ -22,3 +22,23 @@ export function readDatabaseLatencyMs(value: unknown): number | null {
     ? latency
     : null;
 }
+
+/**
+ * Reads a JSON health body once, including on HTTP errors (for example, the
+ * CLEAR 503 response). Parsing failure never changes the HTTP status decision.
+ */
+export async function readHealthResponse(response: Response): Promise<{
+  isJson: boolean;
+  payload: ReadinessPayload | null;
+  databaseLatencyMs: number | null;
+}> {
+  const contentType = response.headers.get("content-type")?.toLowerCase() ?? "";
+  const isJson = contentType.includes("application/json");
+  const body: unknown = isJson ? await response.json().catch(() => null) : null;
+
+  return {
+    isJson,
+    payload: asReadinessPayload(body),
+    databaseLatencyMs: readDatabaseLatencyMs(body),
+  };
+}
