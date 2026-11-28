@@ -1,5 +1,6 @@
 import { BlobNotFoundError, get, head, put } from "@vercel/blob";
 import { randomUUID } from "node:crypto";
+import { summarizeDatabaseProbeLatency, type DatabaseProbeLatencySummary } from "@/lib/health-probe-history";
 
 export type HistoryServiceStatus = "healthy" | "degraded" | "unhealthy";
 
@@ -45,6 +46,7 @@ export type MonitorHistory = {
     totalChecks: number;
     healthyPercent: number | null;
   }>;
+  databaseProbeLatency: DatabaseProbeLatencySummary[];
   incidents: MonitorIncident[];
 };
 
@@ -59,6 +61,7 @@ function emptyHistory(available = true): MonitorHistory {
     periodStart: null,
     periodEnd: null,
     availability: [],
+    databaseProbeLatency: [],
     incidents: [],
   };
 }
@@ -257,6 +260,7 @@ export async function getMonitorHistory(): Promise<MonitorHistory> {
       totalChecks: stats.total,
       healthyPercent: stats.total ? Math.round((stats.healthy / stats.total) * 1000) / 10 : null,
     })),
+    databaseProbeLatency: summarizeDatabaseProbeLatency(snapshots),
     incidents: incidents.slice(0, 20),
   };
 }
