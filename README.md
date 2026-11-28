@@ -47,18 +47,10 @@ Requires Node.js 20.9+ and npm.
 4. Run `npm run dev`.
 5. Open `http://localhost:3000/api/health`.
 
-## Roadmap
+## Master roadmap
 
-- [x] Repository foundation and architecture boundaries
-- [x] Health endpoint and service authentication
-- [x] Model adapter and budget configuration
-- [x] Versioned v1 agent API
-- [x] Privacy-first agent registry and default-deny policy
-- [x] SAGA fixed-topic system-help capability with no-prompt-training provider routing
-- [x] System Admin monitoring and persistent history
-- [ ] CLEAR Sys and ROAMPH capabilities after purpose and privacy review
-- [ ] Structured, redacted integration audit
-- [ ] Agent orchestration and human approval workflows
-- [ ] Expanded integration tests and operational controls
+The original Cognix platform roadmap remains the governing product roadmap. The Learning Machine Layer (LML), incident intelligence, AI resolution advice, remediation planning, and future self-healing are cross-platform capabilities that strengthen the core platform and its connected agents; they do not replace the original platform phases.
+
+See [docs/cognix-master-roadmap-v1.md](docs/cognix-master-roadmap-v1.md) for phase definitions, current status, dependencies, and delivery order.
 
 No production application database is provisioned or directly connected to COGNIX.
